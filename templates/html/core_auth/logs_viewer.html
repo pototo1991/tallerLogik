@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block title %}Logs del Sistema - TallerLogik Superadmin{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header Principal -->
+    <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2">
+                <span class="text-2xl">🖥️</span>
+                <h1 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+                    Logs del Sistema
+                </h1>
+            </div>
+            <p class="text-sm text-slate-400 mt-1">
+                Monitoreo en tiempo real de actividad y errores globales de la plataforma SaaS.
+            </p>
+        </div>
+        <div class="flex items-center gap-3">
+            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-purple-950 text-purple-300 border border-purple-800">
+                Superadministrador Global SaaS
+            </span>
+            <a href="{% url 'core_auth:dashboard' %}" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-xl border border-slate-700 transition flex items-center gap-1.5">
+                &larr; Volver al Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Panel Visor de Logs -->
+    <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl space-y-4">
+        <!-- Navegación de Pestañas (Tabs) & Acciones -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800 pb-4">
+            
+            <!-- Selector de Tipo de Log -->
+            <div class="flex items-center space-x-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
+                <a href="{% url 'core_auth:logs_viewer' %}?tipo=actividad" 
+                   class="px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2
+                   {% if tipo == 'actividad' %} bg-[#0284C7] text-white shadow-md shadow-sky-500/20 {% else %} text-slate-400 hover:text-white hover:bg-slate-900 {% endif %}">
+                    <span>📋 Log de Actividad</span>
+                    <span class="px-1.5 py-0.5 rounded text-[10px] {% if tipo == 'actividad' %} bg-sky-900/60 text-sky-100 {% else %} bg-slate-800 text-slate-400 {% endif %}">
+                        INFO
+                    </span>
+                </a>
+
+                <a href="{% url 'core_auth:logs_viewer' %}?tipo=errores" 
+                   class="px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2
+                   {% if tipo == 'errores' %} bg-red-900 text-red-100 shadow-md shadow-red-500/20 border border-red-700 {% else %} text-slate-400 hover:text-white hover:bg-slate-900 {% endif %}">
+                    <span>⚠️ Log de Errores</span>
+                    <span class="px-1.5 py-0.5 rounded text-[10px] {% if tipo == 'errores' %} bg-red-950 text-red-300 {% else %} bg-slate-800 text-slate-400 {% endif %}">
+                        ERROR
+                    </span>
+                </a>
+            </div>
+
+            <!-- Botones de Acción HTMX -->
+            <div class="flex items-center space-x-3">
+                <div id="loading-spinner" class="htmx-indicator flex items-center text-xs text-sky-400 gap-1.5 font-medium">
+                    <svg class="animate-spin h-4 w-4 text-sky-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Actualizando log...</span>
+                </div>
+
+                <button hx-get="{% url 'core_auth:logs_viewer' %}?tipo={{ tipo }}&partial=1"
+                        hx-target="#log-content-wrapper"
+                        hx-swap="innerHTML"
+                        hx-indicator="#loading-spinner"
+                        class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-semibold text-xs rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-sm">
+                    🔄 Actualizar Consola
+                </button>
+            </div>
+        </div>
+
+        <!-- Wrapper del Contenido del Log -->
+        <div id="log-content-wrapper">
+            {% include 'core_auth/partials/log_content.html' %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Hacer auto-scroll al final de la consola al cargar
+    document.addEventListener('DOMContentLoaded', function() {
+        var container = document.getElementById('log-container');
+        if (container) {
+            container.scrollTop = container.scrollHeight;
+        }
+    });
+
+    // Auto-scroll al actualizar via HTMX
+    document.body.addEventListener('htmx:afterOnLoad', function(evt) {
+        if (evt.detail.target.id === 'log-content-wrapper') {
+            var container = document.getElementById('log-container');
+            if (container) {
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,431 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}{{ cotizacion.numero_cotizacion }} (v{{ cotizacion.version }}) - Cotizador TallerLogik{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header & Acciones Principales -->
+    <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center space-x-3">
+                <h1 class="text-2xl font-bold text-white tracking-tight">{{ cotizacion.numero_cotizacion }}</h1>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-950 text-sky-400 border border-sky-800">
+                    Versión {{ cotizacion.version }}
+                </span>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold
+                    {% if cotizacion.estado == 'aprobada' %} bg-emerald-950 text-emerald-300 border border-emerald-800
+                    {% else %} bg-slate-800 text-slate-300 border border-slate-700 {% endif %}">
+                    {{ cotizacion.get_estado_display }}
+                </span>
+            </div>
+            <p class="text-sm text-slate-300 font-semibold mt-1">{{ cotizacion.titulo_propuesta }}</p>
+            <p class="text-xs text-slate-400">
+                Cliente: <strong class="text-white">{{ cotizacion.id_cliente.razon_social }}</strong> | 
+                Validez: {{ cotizacion.dias_validez }} días | 
+                Fecha Entrega: <strong class="text-emerald-400">{{ cotizacion.fecha_entrega_sugerida|date:"d/m/Y" }}</strong>
+                {% if cotizacion.fecha_entrega_manual %}
+                    <span class="text-[10px] text-amber-300 font-semibold">(Fija)</span>
+                {% else %}
+                    <span class="text-[10px] text-sky-400">(Sugerida, {{ cotizacion.dias_mano_obra_estimados }} días hábiles)</span>
+                {% endif %}
+            </p>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div class="flex flex-wrap items-center gap-2">
+            <!-- Ver / Descargar PDF WeasyPrint -->
+            <a href="{% url 'cotizador:cotizacion_pdf' cotizacion.pk %}" target="_blank" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-amber-300 bg-amber-950/80 hover:bg-amber-900 border border-amber-800 transition">
+                📄 Exportar PDF
+            </a>
+
+            <!-- Clonar Versión -->
+            <form action="{% url 'cotizador:cotizacion_clonar' cotizacion.pk %}" method="POST" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-sky-300 bg-sky-950/80 hover:bg-sky-900 border border-sky-800 transition">
+                    📋 Clonar a v{{ cotizacion.version|add:"1" }}
+                </button>
+            </form>
+
+            <!-- Aprobar y Convertir a OT -->
+            {% if cotizacion.estado != 'aprobada' %}
+            <form action="{% url 'ordenes_trabajo:aprobar_cotizacion' cotizacion.pk %}" method="POST" class="inline" onsubmit="return confirm('¿Aprobar esta cotización y generar la Orden de Trabajo (OT) en taller?');">
+                {% csrf_token %}
+                <button type="submit" class="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-600/20 transition">
+                    ✅ Aprobar & Generar OT
+                </button>
+            </form>
+            {% else %}
+            <span class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800">
+                ✓ OT Generada
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Modificación de Parámetros de Cabecera (Margen, CIF, Fechas, Notas) -->
+    <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl" x-data="{ open: false }">
+        <div class="flex items-center justify-between cursor-pointer" @click="open = !open">
+            <h3 class="text-sm font-bold text-slate-300">Ajustar Margen Objetivo, CIF, Fechas de Entrega y Condiciones Comercial</h3>
+            <span class="text-xs text-sky-400 font-semibold" x-text="open ? '[-] Ocultar Ajustes' : '[+] Modificar Margen/CIF/Fechas'"></span>
+        </div>
+        <form method="POST" x-show="open" x-cloak class="mt-4 pt-4 border-t border-slate-800 space-y-4">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Margen Objetivo (%)</label>
+                    {{ header_form.margen_objetivo_pct }}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Costo Indirecto CIF ($)</label>
+                    {{ header_form.costo_indirecto_cif_estimado }}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Días de Validez</label>
+                    {{ header_form.dias_validez }}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Inicio Estimado</label>
+                    {{ header_form.fecha_inicio_estimada }}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Entrega Fija (Opcional)</label>
+                    {{ header_form.fecha_entrega_manual }}
+                </div>
+                <div class="sm:col-span-2 lg:col-span-5">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Notas y Condiciones</label>
+                    {{ header_form.notas_condiciones }}
+                </div>
+            </div>
+            <div class="flex justify-end">
+                <button type="submit" class="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-[#0284C7] hover:bg-sky-500 transition">
+                    Actualizar Cotización
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Incluir Tabla HTMX Dinámica -->
+    {% include 'cotizador/partials/items_table.html' %}
+
+    <!-- Formulario Dinámico para Agregar Ítem -->
+    <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl"
+         x-data="itemBudgetData()"
+         @htmx:after-request="if ($event.detail.successful) resetForm()">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-800">
+            <h3 class="text-base font-bold text-white">+ Agregar Ítem al Presupuesto Comercial</h3>
+            
+            <!-- Selector de Tipo de Ítem (Tabs) -->
+            <div class="flex items-center p-1 bg-slate-900 rounded-xl border border-slate-800 self-start sm:self-auto">
+                <button type="button" 
+                        @click="setTipoItem('Material')"
+                        :class="tipoItem === 'Material' ? 'bg-amber-500/20 text-amber-300 border-amber-500/50' : 'text-slate-400 hover:text-slate-200 border-transparent'"
+                        class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition flex items-center space-x-1.5">
+                    <span>📦 Material / Insumo</span>
+                </button>
+                <button type="button" 
+                        @click="setTipoItem('Mano_Obra')"
+                        :class="tipoItem === 'Mano_Obra' ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50' : 'text-slate-400 hover:text-slate-200 border-transparent'"
+                        class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition flex items-center space-x-1.5">
+                    <span>🔨 Mano de Obra (MOD)</span>
+                </button>
+                <button type="button" 
+                        @click="setTipoItem('Servicio_Tercero')"
+                        :class="tipoItem === 'Servicio_Tercero' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50' : 'text-slate-400 hover:text-slate-200 border-transparent'"
+                        class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition flex items-center space-x-1.5">
+                    <span>🚚 Servicio Tercero</span>
+                </button>
+            </div>
+        </div>
+
+        <form hx-post="{% url 'cotizador:item_create' cotizacion.pk %}"
+              hx-target="#cotizacion-editor-container"
+              hx-swap="outerHTML"
+              class="space-y-4">
+            {% csrf_token %}
+
+            <!-- Campos Ocultos Sincronizados para Formulario POST -->
+            <input type="hidden" name="tipo_item" :value="tipoItem">
+            <input type="hidden" name="costo_unitario" :value="costoUnitario">
+            <input type="hidden" name="cantidad" :value="cantidad">
+            <input type="hidden" name="descripcion" :value="descripcion">
+
+            <!-- 1. VISTA: MATERIAL DEL CATÁLOGO -->
+            <div x-show="tipoItem === 'Material'" class="grid grid-cols-1 sm:grid-cols-12 gap-4">
+                <div class="sm:col-span-6 lg:col-span-3">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Material del Catálogo</label>
+                    {{ item_form.id_material }}
+                </div>
+                
+                <div class="sm:col-span-6 lg:col-span-3">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Valor por Unidad ($) *</label>
+                    <input type="number" step="0.01" x-model.number="costoMat" @input="syncMaterial()" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono focus:outline-none focus:border-sky-500" placeholder="0.00">
+                </div>
+
+                <div class="sm:col-span-6 lg:col-span-3">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Cantidad *</label>
+                    <input type="number" step="0.01" x-model.number="cantidadMat" @input="syncMaterial()" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono focus:outline-none focus:border-sky-500" placeholder="1">
+                </div>
+
+                <div class="sm:col-span-6 lg:col-span-3">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Monto Total Material ($)</label>
+                    <div class="px-4 py-2 bg-slate-900 border border-slate-700/80 rounded-lg text-amber-400 font-mono font-bold text-base shadow-inner flex items-center justify-between h-[42px]">
+                        <span>$</span>
+                        <span x-text="montoTotalFormatted">0,00</span>
+                    </div>
+                </div>
+
+                <div class="sm:col-span-8 lg:col-span-9">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Descripción Personalizada *</label>
+                    <input type="text" x-model="descripcionMat" @input="syncMaterial()" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500" placeholder="Descripción del insumo o material">
+                </div>
+
+                <div class="sm:col-span-4 lg:col-span-3 flex items-end">
+                    <button type="submit" class="w-full px-5 py-2.5 rounded-xl text-xs font-semibold text-white bg-[#0284C7] hover:bg-sky-500 transition shadow-lg shadow-sky-500/20 flex items-center justify-center space-x-1 h-[42px]">
+                        <span>+ Añadir Material</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 2. VISTA: MANO DE OBRA (MOD) POR DÍAS HÁBILES Y TRABAJADORES -->
+            <div x-show="tipoItem === 'Mano_Obra'" x-cloak class="space-y-4">
+                <div class="bg-indigo-950/30 p-4 rounded-xl border border-indigo-900/50">
+                    <div class="grid grid-cols-1 sm:grid-cols-12 gap-4">
+                        <!-- Trabajador / Operario Registrado en Aplicativo -->
+                        <div class="sm:col-span-6 lg:col-span-4">
+                            <label class="block text-xs font-semibold text-indigo-300 uppercase mb-1">Trabajador / Operario</label>
+                            <select x-model="selectedRol" @change="onRolChange()" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 text-sm">
+                                {% for op in operarios_lista %}
+                                <option value="user:{{ op.id }}">{{ op.nombre_completo }} ({{ op.get_rol_display }}) - {{ op.costo_hora|clp }}/hr</option>
+                                {% empty %}
+                                <option value="">-- No hay trabajadores registrados en el sistema --</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Días Hábiles Estimados -->
+                        <div class="sm:col-span-6 lg:col-span-2">
+                            <label class="block text-xs font-semibold text-indigo-300 uppercase mb-1">Días Hábiles</label>
+                            <input type="number" step="0.5" min="0.5" x-model.number="diasHabiles" @input="recalcularMo()" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono focus:outline-none focus:border-indigo-500">
+                        </div>
+
+                        <!-- Cantidad de Personas -->
+                        <div class="sm:col-span-6 lg:col-span-2">
+                            <label class="block text-xs font-semibold text-indigo-300 uppercase mb-1">N° Trabajadores</label>
+                            <input type="number" step="1" min="1" x-model.number="cantidadPersonas" @input="recalcularMo()" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono focus:outline-none focus:border-indigo-500">
+                        </div>
+
+                        <!-- Horas por Día -->
+                        <div class="sm:col-span-6 lg:col-span-2">
+                            <label class="block text-xs font-semibold text-indigo-300 uppercase mb-1">Horas / Día</label>
+                            <input type="number" step="1" min="1" max="24" x-model.number="horasPorDia" @input="recalcularMo()" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono focus:outline-none focus:border-indigo-500">
+                        </div>
+
+                        <!-- Costo por Hora ($) -->
+                        <div class="sm:col-span-6 lg:col-span-2">
+                            <label class="block text-xs font-semibold text-indigo-300 uppercase mb-1">Tarifa Hora ($)</label>
+                            <input type="number" step="0.01" x-model.number="costoHora" @input="recalcularMo()" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono focus:outline-none focus:border-indigo-500">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
+                    <!-- Resumen Reactivo de Horas e Importe Totales -->
+                    <div class="sm:col-span-8 lg:col-span-9">
+                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Detalle / Descripción para Presupuesto</label>
+                        <input type="text" x-model="descripcionMo" @input="syncMoManualDesc()" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-indigo-500">
+                        <div class="mt-1.5 flex items-center space-x-3 text-xs text-indigo-300">
+                            <span>⏱ Total Horas: <strong class="font-mono text-white" x-text="horasTotalesMo">0</strong> hrs</span>
+                            <span>•</span>
+                            <span>💰 Subtotal MOD Estimado: <strong class="font-mono text-emerald-400 text-sm" x-text="'$' + montoTotalMoFormatted">0,00</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- Botón Añadir MOD -->
+                    <div class="sm:col-span-4 lg:col-span-3 flex items-end">
+                        <button type="submit" class="w-full px-5 py-2.5 rounded-xl text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/20 flex items-center justify-center space-x-1 h-[42px]">
+                            <span>+ Añadir Mano de Obra</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. VISTA: SERVICIO TERCERO -->
+            <div x-show="tipoItem === 'Servicio_Tercero'" x-cloak class="grid grid-cols-1 sm:grid-cols-12 gap-4">
+                <div class="sm:col-span-8 lg:col-span-6">
+                    <label class="block text-xs font-semibold text-emerald-300 uppercase mb-1">Descripción del Servicio Tercero</label>
+                    <input type="text" x-model="descripcionServicio" @input="syncServicio()" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-emerald-500" placeholder="Ej. Laqueado poliuretano exterior, Flete y transporte...">
+                </div>
+
+                <div class="sm:col-span-4 lg:col-span-3">
+                    <label class="block text-xs font-semibold text-emerald-300 uppercase mb-1">Costo ($)</label>
+                    <input type="number" step="0.01" x-model.number="costoServicio" @input="syncServicio()" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono focus:outline-none focus:border-emerald-500" placeholder="0.00">
+                </div>
+
+                <div class="sm:col-span-12 lg:col-span-3 flex items-end">
+                    <button type="submit" class="w-full px-5 py-2.5 rounded-xl text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 transition shadow-lg shadow-emerald-600/20 flex items-center justify-center space-x-1 h-[42px]">
+                        <span>+ Añadir Servicio</span>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        function itemBudgetData() {
+            return {
+                tipoItem: 'Material',
+                materialesMap: {{ materiales_json|default:'{}'|safe }},
+                operariosMap: {{ operarios_json|default:'{}'|safe }},
+
+                // Estado POST Unificado
+                costoUnitario: '',
+                cantidad: 1,
+                descripcion: '',
+                
+                // Campos Específicos Material
+                selectedMaterial: '',
+                costoMat: '',
+                cantidadMat: 1,
+                descripcionMat: '',
+
+                // Campos Específicos Mano de Obra
+                selectedRol: '',
+                nombreRolTrabajador: 'Operario',
+                diasHabiles: 2,
+                cantidadPersonas: 1,
+                horasPorDia: 8,
+                costoHora: 0,
+                descripcionMo: '',
+                moDescModificadaManualmente: false,
+
+                // Campos Específicos Servicio Tercero
+                descripcionServicio: '',
+                costoServicio: '',
+
+                init() {
+                    const keys = Object.keys(this.operariosMap);
+                    if (keys.length > 0) {
+                        this.selectedRol = 'user:' + keys[0];
+                    }
+                    this.onRolChange();
+                    this.syncMaterial();
+                },
+
+                setTipoItem(tipo) {
+                    this.tipoItem = tipo;
+                    if (tipo === 'Material') {
+                        this.syncMaterial();
+                    } else if (tipo === 'Mano_Obra') {
+                        this.recalcularMo();
+                    } else if (tipo === 'Servicio_Tercero') {
+                        this.syncServicio();
+                    }
+                },
+
+                onMaterialChange() {
+                    if (this.selectedMaterial && this.materialesMap[this.selectedMaterial]) {
+                        const mat = this.materialesMap[this.selectedMaterial];
+                        this.costoMat = parseFloat(mat.costo) || 0;
+                        if (!this.descripcionMat) {
+                            this.descripcionMat = mat.nombre;
+                        }
+                    }
+                    this.syncMaterial();
+                },
+
+                syncMaterial() {
+                    this.costoUnitario = parseFloat(this.costoMat) || 0;
+                    this.cantidad = parseFloat(this.cantidadMat) || 1;
+                    this.descripcion = this.descripcionMat || '';
+                },
+
+                syncServicio() {
+                    this.costoUnitario = parseFloat(this.costoServicio) || 0;
+                    this.cantidad = 1;
+                    this.descripcion = this.descripcionServicio || '';
+                },
+
+                syncMoManualDesc() {
+                    this.moDescModificadaManualmente = true;
+                    this.descripcion = this.descripcionMo;
+                },
+
+                onRolChange() {
+                    this.moDescModificadaManualmente = false;
+                    if (this.selectedRol && this.selectedRol.startsWith('user:')) {
+                        const userId = this.selectedRol.replace('user:', '');
+                        if (this.operariosMap[userId]) {
+                            const op = this.operariosMap[userId];
+                            this.nombreRolTrabajador = `${op.nombre} (${op.rol})`;
+                            this.costoHora = op.costo_hora || 0;
+                        }
+                    } else {
+                        this.nombreRolTrabajador = 'Mano de Obra';
+                    }
+                    this.recalcularMo();
+                },
+
+                recalcularMo() {
+                    const dias = parseFloat(this.diasHabiles) || 0;
+                    const personas = parseFloat(this.cantidadPersonas) || 0;
+                    const hpd = parseFloat(this.horasPorDia) || 8;
+                    const cHora = parseFloat(this.costoHora) || 0;
+
+                    const hrsTotales = dias * personas * hpd;
+                    if (!this.moDescModificadaManualmente) {
+                        this.descripcionMo = `${this.nombreRolTrabajador} (${personas} ${personas === 1 ? 'persona' : 'personas'} × ${dias} ${dias === 1 ? 'día' : 'días'} hábiles)`;
+                    }
+
+                    // Sincronizar estado POST unificado para Mano de Obra
+                    this.cantidad = hrsTotales;
+                    this.costoUnitario = cHora;
+                    this.descripcion = this.descripcionMo;
+                },
+
+                get horasTotalesMo() {
+                    const dias = parseFloat(this.diasHabiles) || 0;
+                    const personas = parseFloat(this.cantidadPersonas) || 0;
+                    const hpd = parseFloat(this.horasPorDia) || 8;
+                    return dias * personas * hpd;
+                },
+
+                get montoTotalFormatted() {
+                    const unitCost = parseFloat(this.costoMat) || 0;
+                    const qty = parseFloat(this.cantidadMat) || 0;
+                    const total = Math.round(unitCost * qty);
+                    return total.toLocaleString('es-CL');
+                },
+
+                get montoTotalMoFormatted() {
+                    const total = Math.round(this.horasTotalesMo * (parseFloat(this.costoHora) || 0));
+                    return total.toLocaleString('es-CL');
+                },
+
+                resetForm() {
+                    this.selectedMaterial = '';
+                    this.costoMat = '';
+                    this.cantidadMat = 1;
+                    this.descripcionMat = '';
+                    this.descripcionServicio = '';
+                    this.costoServicio = '';
+                    this.moDescModificadaManualmente = false;
+
+                    if (this.tipoItem === 'Material') {
+                        this.syncMaterial();
+                    } else if (this.tipoItem === 'Mano_Obra') {
+                        this.recalcularMo();
+                    } else if (this.tipoItem === 'Servicio_Tercero') {
+                        this.syncServicio();
+                    }
+                }
+            }
+        }
+    </script>
+
+
+</div>
+{% endblock %}
+

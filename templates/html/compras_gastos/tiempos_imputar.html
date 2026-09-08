@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}Imputar Horas MOD - TallerLogik{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto space-y-6">
+    <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-white tracking-tight">Imputar Horas de Taller (MOD)</h1>
+            <p class="text-xs text-slate-400 mt-1">Registro manual de horas trabajadas por operario y etapa productiva</p>
+        </div>
+        <a href="{% url 'compras_gastos:tiempos_list' %}" class="text-xs font-semibold text-slate-400 hover:text-white transition">
+            &larr; Ver Historial
+        </a>
+    </div>
+
+    <div class="bg-[#0F172A] p-6 sm:p-8 rounded-2xl border border-slate-800 shadow-xl">
+        <form method="POST" class="space-y-4">
+            {% csrf_token %}
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                    Orden de Trabajo (OT) *
+                </label>
+                {{ form.id_proyecto }}
+                {% if form.id_proyecto.errors %}<p class="text-xs text-red-400 mt-1">{{ form.id_proyecto.errors.0 }}</p>{% endif %}
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                    Operario / Miembro del Equipo *
+                </label>
+                {{ form.id_usuario }}
+                {% if form.id_usuario.errors %}<p class="text-xs text-red-400 mt-1">{{ form.id_usuario.errors.0 }}</p>{% endif %}
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                    Etapa Productiva *
+                </label>
+                {{ form.etapa }}
+                {% if form.etapa.errors %}<p class="text-xs text-red-400 mt-1">{{ form.etapa.errors.0 }}</p>{% endif %}
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                    Horas Trabajadas (Ej. 4.5 hrs) *
+                </label>
+                {{ form.horas_trabajadas }}
+                {% if form.horas_trabajadas.errors %}<p class="text-xs text-red-400 mt-1">{{ form.horas_trabajadas.errors.0 }}</p>{% endif %}
+            </div>
+
+            <div class="pt-6 flex justify-end space-x-3">
+                <a href="{% url 'compras_gastos:tiempos_list' %}" class="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 transition">
+                    Cancelar
+                </a>
+                <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-semibold text-white bg-[#0284C7] hover:bg-sky-500 transition shadow-lg shadow-sky-500/20">
+                    Guardar Imputación de Horas
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

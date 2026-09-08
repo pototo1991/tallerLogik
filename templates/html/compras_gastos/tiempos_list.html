@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}Historial de Tiempos MOD - TallerLogik{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl">
+        <div>
+            <h1 class="text-2xl font-bold text-white tracking-tight">Historial de Mano de Obra Directa (MOD)</h1>
+            <p class="text-xs text-slate-400 mt-1">Horas imputadas por operario, etapa y proyecto con cálculo inmutable de costo</p>
+        </div>
+        <a href="{% url 'compras_gastos:tiempos_imputar' %}" class="inline-flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-[#0284C7] hover:bg-sky-500 transition shadow-lg shadow-sky-500/20">
+            + Imputar Horas
+        </a>
+    </div>
+
+    <div class="bg-[#0F172A] rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-300">
+                <thead class="bg-slate-900 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                    <tr>
+                        <th class="px-6 py-4">Fecha</th>
+                        <th class="px-6 py-4">Orden de Trabajo (OT)</th>
+                        <th class="px-6 py-4">Operario</th>
+                        <th class="px-6 py-4">Etapa</th>
+                        <th class="px-6 py-4">Horas Imputadas</th>
+                        <th class="px-6 py-4">Costo MOD Calculado ($)</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800">
+                    {% for t in tiempos %}
+                    <tr class="hover:bg-slate-900/50 transition">
+                        <td class="px-6 py-4 text-xs font-mono text-slate-400">
+                            {{ t.fecha_registro|date:"d/m/Y H:i" }}
+                        </td>
+                        <td class="px-6 py-4 font-mono font-bold text-sky-400">
+                            {{ t.id_proyecto.codigo_ot }} - {{ t.id_proyecto.nombre_proyecto }}
+                        </td>
+                        <td class="px-6 py-4 font-semibold text-white">
+                            {{ t.id_usuario.nombre_completo }}
+                            <div class="text-[11px] text-slate-500 font-mono">({{ t.id_usuario.costo_hora|clp }}/hr)</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700">
+                                {{ t.get_etapa_display }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 font-mono font-bold text-white">
+                            {{ t.horas_trabajadas }} hrs
+                        </td>
+                        <td class="px-6 py-4 font-mono font-bold text-emerald-400">
+                            {{ t.costo_mano_obra_calculado|clp }}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center text-slate-500">
+                            No hay registros de tiempo imputados aún.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

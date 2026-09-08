@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-950">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}TallerLogik - SaaS Taller a Medida{% endblock %}</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS (CDN para desarrollo dinámico) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            dark: '#0F172A',
+                            accent: '#0284C7',
+                            alert: '#DC2626'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- HTMX 1.9 -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <!-- Alpine.js 3 -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <style>
+        [x-cloak] { display: none !important; }
+        /* Smooth scrollbar inside sidebar */
+        .sidebar-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .sidebar-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .sidebar-scroll::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+        .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="h-full font-sans text-slate-200 antialiased bg-slate-950 min-h-screen flex flex-col"
+      x-data="{
+          sidebarCollapsed: localStorage.getItem('sidebar_collapsed') === 'true',
+          mobileSidebarOpen: false,
+          toggleSidebar() {
+              this.sidebarCollapsed = !this.sidebarCollapsed;
+              localStorage.setItem('sidebar_collapsed', this.sidebarCollapsed);
+          }
+      }"
+      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+
+    {% if user.is_authenticated and user.rol != 'superadmin_saas' %}
+    <!-- Layout con Sidebar Lateral Izquierdo para Roles de Taller -->
+    <div class="flex flex-1 min-h-screen w-full relative">
+
+        <!-- SIDEBAR DESKTOP -->
+        <aside class="hidden md:flex flex-col bg-[#0F172A] border-r border-slate-800 transition-all duration-300 z-40 sticky top-0 h-screen shrink-0 shadow-2xl"
+               :class="sidebarCollapsed ? 'w-20' : 'w-64'">
+            
+            <!-- Sidebar Header (Logo + Marca + Toggle) -->
+            <div class="h-16 px-4 flex items-center justify-between border-b border-slate-800 shrink-0">
+                <a href="{% url 'core_auth:dashboard' %}" class="flex items-center space-x-3 overflow-hidden group">
+                    <div class="w-10 h-10 rounded-xl bg-[#0284C7] flex items-center justify-center font-black text-white text-base shadow-md shadow-sky-500/20 group-hover:bg-sky-500 transition-colors shrink-0">
+                        TL
+                    </div>
+                    <div class="flex flex-col justify-center leading-tight transition-opacity duration-200" x-show="!sidebarCollapsed" x-cloak>
+                        <span class="text-base font-bold tracking-tight text-white group-hover:text-sky-300 transition-colors whitespace-nowrap">
+                            Taller<span class="text-[#0284C7]">Logik</span>
+                        </span>
+                        {% if request.tenant %}
+                        <span class="text-[11px] font-medium text-sky-400 tracking-wide truncate max-w-[130px]" title="{{ request.tenant.nombre_empresa }}">
+                            {{ request.tenant.nombre_empresa }}
+                        </span>
+                        {% endif %}
+                    </div>
+                </a>
+
+                <!-- Botón Alternar Colapso -->
+                <button @click="toggleSidebar()" 
+                        class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors focus:outline-none shrink-0"
+                        :title="sidebarCollapsed ? 'Expandir Menú' : 'Colapsar Menú'">
+                    <svg class="w-5 h-5 transition-transform duration-300" :class="sidebarCollapsed ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Sidebar Body (Links con Tooltips en modo colapsado) -->
+            <div class="flex-1 overflow-y-auto sidebar-scroll py-4 px-3 space-y-6">
+                
+                <!-- Dashboard Solo -->
+                <div>
+                    <a href="{% url 'core_auth:dashboard' %}" 
+                       class="relative flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group border border-transparent {% if request.resolver_match.url_name == 'dashboard' %} bg-sky-950/70 text-sky-300 border-sky-800/60 shadow-sm {% else %} text-slate-300 hover:bg-slate-800/60 hover:text-white {% endif %}"
+                       :class="sidebarCollapsed ? 'justify-center' : ''">
+                        <svg class="w-5 h-5 shrink-0 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                        </svg>
+                        <span x-show="!sidebarCollapsed" x-cloak class="truncate">Dashboard</span>
+
+                        <!-- Tooltip Colapsado -->
+                        <div x-show="sidebarCollapsed" x-cloak
+                             class="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 border border-slate-700 text-xs font-semibold text-white rounded-lg shadow-2xl whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+                            Dashboard
+                        </div>
+                    </a>
+                </div>
+
+                <!-- Grupo 1: Operación -->
+                <div class="space-y-1">
+                    <div x-show="!sidebarCollapsed" x-cloak class="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                        Operación
+                    </div>
+
+                    <!-- Cotizaciones -->
+                    <a href="{% url 'cotizador:cotizaciones_list' %}" 
+                       class="relative flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group border border-transparent {% if request.resolver_match.url_name == 'cotizaciones_list' or 'cotizacion' in request.resolver_match.url_name %} bg-sky-950/70 text-sky-300 border-sky-800/60 shadow-sm {% else %} text-slate-300 hover:bg-slate-800/60 hover:text-white {% endif %}"
+                       :class="sidebarCollapsed ? 'justify-center' : ''">
+                        <svg class="w-5 h-5 shrink-0 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <span x-show="!sidebarCollapsed" x-cloak class="truncate">Cotizaciones</span>
+
+                        <div x-show="sidebarCollapsed" x-cloak
+                             class="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 border border-slate-700 text-xs font-semibold text-white rounded-lg shadow-2xl whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+                            Cotizaciones
+                        </div>
+                    </a>
+
+                    <!-- Órdenes de Trabajo -->
+                    <a href="{% url 'ordenes_trabajo:proyectos_list' %}" 
+                       class="relative flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group border border-transparent {% if request.resolver_match.url_name == 'proyectos_list' or 'proyecto' in request.resolver_match.url_name %} bg-sky-950/70 text-sky-300 border-sky-800/60 shadow-sm {% else %} text-slate-300 hover:bg-slate-800/60 hover:text-white {% endif %}"
+                       :class="sidebarCollapsed ? 'justify-center' : ''">
+                        <svg class="w-5 h-5 shrink-0 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                        </svg>
+                        <span x-show="!sidebarCollapsed" x-cloak class="truncate">Órdenes de Trabajo</span>
+
+                        <div x-show="sidebarCollapsed" x-cloak
+                             class="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 border border-slate-700 text-xs font-semibold text-white rounded-lg shadow-2xl whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+                            Órdenes de Trabajo
+                        </div>
+                    </a>
+
+                    <!-- Tiempos MOD -->
+                    <a href="{% url 'compras_gastos:tiempos_list' %}" 
+                       class="relative flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group border border-transparent {% if request.resolver_match.url_name == 'tiempos_list' or 'tiempos' in request.resolver_match.url_name %} bg-sky-950/70 text-sky-300 border-sky-800/60 shadow-sm {% else %} text-slate-300 hover:bg-slate-800/60 hover:text-white {% endif %}"
+                       :class="sidebarCollapsed ? 'justify-center' : ''">
+                        <svg class="w-5 h-5 shrink-0 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span x-show="!sidebarCollapsed" x-cloak class="truncate">Tiempos MOD</span>
+
+                        <div x-show="sidebarCollapsed" x-cloak
+                             class="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 border border-slate-700 text-xs font-semibold text-white rounded-lg shadow-2xl whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+                            Tiempos MOD
+                        </div>
+                    </a>
+                </div>
+
+                <!-- Grupo 2: Finanzas -->
+                <div class="space-y-1">
+                    <div x-show="!sidebarCollapsed" x-cloak class="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                        Finanzas
+                    </div>
+
+                    <!-- Compras & Facturas -->
+                    <a href="{% url 'compras_gastos:facturas_list' %}" 
+                       class="relative flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group border border-transparent {% if request.resolver_match.url_name == 'facturas_list' or 'factura' in request.resolver_match.url_name %} bg-sky-950/70 text-sky-300 border-sky-800/60 shadow-sm {% else %} text-slate-300 hover:bg-slate-800/60 hover:text-white {% endif %}"
+                       :class="sidebarCollapsed ? 'justify-center' : ''">
+                        <svg class="w-5 h-5 shrink-0 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"/>
+                        </svg>
+                        <span x-show="!sidebarCollapsed" x-cloak class="truncate">Compras & Facturas</span>
+
+                        <div x-show="sidebarCollapsed" x-cloak
+                             class="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 border border-slate-700 text-xs font-semibold text-white rounded-lg shadow-2xl whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+                            Compras & Facturas
+                        </div>
+                    </a>
+
+                    <!-- Rentabilidad & KPIs -->
+                    <a href="{% url 'rentabilidad_cobranzas:dashboard_rentabilidad' %}" 
+                       class="relative flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group border border-transparent {% if request.resolver_match.url_name == 'dashboard_rentabilidad' %} bg-sky-950/70 text-sky-300 border-sky-800/60 shadow-sm {% else %} text-slate-300 hover:bg-slate-800/60 hover:text-white {% endif %}"
+                       :class="sidebarCollapsed ? 'justify-center' : ''">
+                        <svg class="w-5 h-5 shrink-0 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                        </svg>
+                        <span x-show="!sidebarCollapsed" x-cloak class="truncate">Rentabilidad & KPIs</span>
+
+                        <div x-show="sidebarCollapsed" x-cloak
+                             class="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 border border-slate-700 text-xs font-semibold text-white rounded-lg shadow-2xl whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+                            Rentabilidad & KPIs
+                        </div>
+                    </a>
+
+                    <!-- Cobranzas -->
+                    <a href="{% url 'rentabilidad_cobranzas:cobranzas_list' %}" 
+                       class="relative flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group border border-transparent {% if request.resolver_match.url_name == 'cobranzas_list' or 'pago' in request.resolver_match.url_name %} bg-sky-950/70 text-sky-300 border-sky-800/60 shadow-sm {% else %} text-slate-300 hover:bg-slate-800/60 hover:text-white {% endif %}"
+                       :class="sidebarCollapsed ? 'justify-center' : ''">
+                        <svg class="w-5 h-5 shrink-0 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                        </svg>
+                        <span x-show="!sidebarCollapsed" x-cloak class="truncate">Cobranzas</span>
+
+                        <div x-show="sidebarCollapsed" x-cloak
+                             class="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 border border-slate-700 text-xs font-semibold text-white rounded-lg shadow-2xl whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+                            Cobranzas
+                        </div>
+                    </a>
+                </div>
+
+                <!-- Grupo 3: Catálogos -->
+                <div class="space-y-1">
+                    <div x-show="!sidebarCollapsed" x-cloak class="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                        Catálogos
+                    </div>
+
+                    <!-- Clientes -->
+                    <a href="{% url 'configuracion_base:clientes_list' %}" 
+                       class="relative flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group border border-transparent {% if request.resolver_match.url_name == 'clientes_list' or 'cliente' in request.resolver_match.url_name %} bg-sky-950/70 text-sky-300 border-sky-800/60 shadow-sm {% else %} text-slate-300 hover:bg-slate-800/60 hover:text-white {% endif %}"
+                       :class="sidebarCollapsed ? 'justify-center' : ''">
+                        <svg class="w-5 h-5 shrink-0 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5 5 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                        </svg>
+                        <span x-show="!sidebarCollapsed" x-cloak class="truncate">Clientes</span>
+
+                        <div x-show="sidebarCollapsed" x-cloak
+                             class="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 border border-slate-700 text-xs font-semibold text-white rounded-lg shadow-2xl whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+                            Clientes
+                        </div>
+                    </a>
+
+                    <!-- Proveedores -->
+                    <a href="{% url 'configuracion_base:proveedores_list' %}" 
+                       class="relative flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group border border-transparent {% if request.resolver_match.url_name == 'proveedores_list' or 'proveedor' in request.resolver_match.url_name %} bg-sky-950/70 text-sky-300 border-sky-800/60 shadow-sm {% else %} text-slate-300 hover:bg-slate-800/60 hover:text-white {% endif %}"
+                       :class="sidebarCollapsed ? 'justify-center' : ''">
+                        <svg class="w-5 h-5 shrink-0 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0h4m-4 0V11m0 0h4m-4 0H9m4 0V7m0 0h4m-4 0H9"/>
+                        </svg>
+                        <span x-show="!sidebarCollapsed" x-cloak class="truncate">Proveedores</span>
+
+                        <div x-show="sidebarCollapsed" x-cloak
+                             class="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 border border-slate-700 text-xs font-semibold text-white rounded-lg shadow-2xl whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+                            Proveedores
+                        </div>
+                    </a>
+
+                    <!-- Materiales -->
+                    <a href="{% url 'configuracion_base:materiales_list' %}" 
+                       class="relative flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group border border-transparent {% if request.resolver_match.url_name == 'materiales_list' or 'material' in request.resolver_match.url_name %} bg-sky-950/70 text-sky-300 border-sky-800/60 shadow-sm {% else %} text-slate-300 hover:bg-slate-800/60 hover:text-white {% endif %}"
+                       :class="sidebarCollapsed ? 'justify-center' : ''">
+                        <svg class="w-5 h-5 shrink-0 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                        </svg>
+                        <span x-show="!sidebarCollapsed" x-cloak class="truncate">Materiales</span>
+
+                        <div x-show="sidebarCollapsed" x-cloak
+                             class="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 border border-slate-700 text-xs font-semibold text-white rounded-lg shadow-2xl whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+                            Materiales
+                        </div>
+                    </a>
+
+                    <!-- Equipo & Operarios -->
+                    {% if user.rol in 'dueno_taller,jefe_taller' %}
+                    <a href="{% url 'configuracion_base:operarios_list' %}" 
+                       class="relative flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group border border-transparent {% if request.resolver_match.url_name == 'operarios_list' or 'operario' in request.resolver_match.url_name %} bg-sky-950/70 text-sky-300 border-sky-800/60 shadow-sm {% else %} text-slate-300 hover:bg-slate-800/60 hover:text-white {% endif %}"
+                       :class="sidebarCollapsed ? 'justify-center' : ''">
+                        <svg class="w-5 h-5 shrink-0 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 012-2h2a2 2 0 012 2v1m-6 0h6"/>
+                        </svg>
+                        <span x-show="!sidebarCollapsed" x-cloak class="truncate">Equipo & Operarios</span>
+
+                        <div x-show="sidebarCollapsed" x-cloak
+                             class="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 border border-slate-700 text-xs font-semibold text-white rounded-lg shadow-2xl whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+                            Equipo & Operarios
+                        </div>
+                    </a>
+                    {% endif %}
+                </div>
+
+            </div>
+
+            <!-- Sidebar Footer (Usuario & Salir) -->
+            <div class="p-3 border-t border-slate-800 shrink-0 bg-slate-950/40">
+                <div class="relative flex items-center space-x-3 p-2 rounded-xl bg-slate-900/90 border border-slate-800 group"
+                     :class="sidebarCollapsed ? 'justify-center p-2' : 'justify-between'">
+                    
+                    <div class="flex items-center space-x-2.5 overflow-hidden">
+                        <div class="w-8 h-8 rounded-lg bg-sky-950 border border-sky-700/60 text-sky-300 font-bold text-xs flex items-center justify-center shadow-sm shrink-0">
+                            {{ user.iniciales }}
+                        </div>
+                        <div class="flex flex-col text-left leading-tight truncate" x-show="!sidebarCollapsed" x-cloak>
+                            <span class="text-xs font-bold text-white tracking-wide truncate">
+                                {{ user.nombre_completo }}
+                            </span>
+                            <span class="text-[10px] font-semibold text-sky-400 truncate">
+                                {{ user.get_rol_display }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Botón Salir -->
+                    <a href="{% url 'core_auth:logout' %}" 
+                       class="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-950/60 transition-colors shrink-0"
+                       :title="sidebarCollapsed ? 'Cerrar Sesión (' + '{{ user.nombre_completo }}' + ')' : 'Cerrar Sesión'">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                        </svg>
+                    </a>
+
+                    <!-- Tooltip Colapsado Usuario -->
+                    <div x-show="sidebarCollapsed" x-cloak
+                         class="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 border border-slate-700 text-xs text-white rounded-lg shadow-2xl whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+                        <div class="font-bold">{{ user.nombre_completo }}</div>
+                        <div class="text-[10px] text-sky-400">{{ user.get_rol_display }}</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- CONTENEDOR PRINCIPAL DERECHA -->
+        <div class="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
+            
+            <!-- Header Móvil (< 768px) -->
+            <header class="md:hidden bg-[#0F172A] border-b border-slate-800 px-4 py-3 flex items-center justify-between sticky top-0 z-30 shadow-md">
+                <a href="{% url 'core_auth:dashboard' %}" class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded-lg bg-[#0284C7] flex items-center justify-center font-black text-white text-sm shadow-md">
+                        TL
+                    </div>
+                    <span class="text-base font-bold text-white">Taller<span class="text-[#0284C7]">Logik</span></span>
+                </a>
+                
+                <button @click="mobileSidebarOpen = true" type="button" class="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+            </header>
+
+            <!-- DRAWER MÓVIL DESLIZABLE (< 768px) -->
+            <div x-show="mobileSidebarOpen" x-cloak
+                 class="fixed inset-0 z-50 md:hidden flex"
+                 role="dialog" aria-modal="true">
+                
+                <!-- Backdrop semitransparente -->
+                <div x-show="mobileSidebarOpen" 
+                     x-transition:enter="transition-opacity ease-linear duration-300"
+                     x-transition:enter-start="opacity-0"
+                     x-transition:enter-end="opacity-100"
+                     x-transition:leave="transition-opacity ease-linear duration-300"
+                     x-transition:leave-start="opacity-100"
+                     x-transition:leave-end="opacity-0"
+                     @click="mobileSidebarOpen = false" 
+                     class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
+
+                <!-- Panel lateral móvil -->
+                <div x-show="mobileSidebarOpen"
+                     x-transition:enter="transition ease-in-out duration-300 transform"
+                     x-transition:enter-start="-translate-x-full"
+                     x-transition:enter-end="translate-x-0"
+                     x-transition:leave="transition ease-in-out duration-300 transform"
+                     x-transition:leave-start="translate-x-0"
+                     x-transition:leave-end="-translate-x-full"
+                     class="relative flex-1 flex flex-col max-w-xs w-full bg-[#0F172A] border-r border-slate-800 shadow-2xl">
+                    
+                    <!-- Header Móvil Drawer -->
+                    <div class="h-16 px-4 flex items-center justify-between border-b border-slate-800">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-9 h-9 rounded-lg bg-[#0284C7] flex items-center justify-center font-black text-white text-base">
+                                TL
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-base font-bold text-white">Taller<span class="text-[#0284C7]">Logik</span></span>
+                                {% if request.tenant %}
+                                <span class="text-[11px] font-medium text-sky-400">{{ request.tenant.nombre_empresa }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <button @click="mobileSidebarOpen = false" class="p-2 text-slate-400 hover:text-white rounded-lg">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Links Móvil -->
+                    <div class="flex-1 overflow-y-auto p-4 space-y-4">
+                        <a href="{% url 'core_auth:dashboard' %}" class="block px-3 py-2 rounded-xl text-sm font-semibold text-slate-200 hover:bg-slate-800">Dashboard</a>
+
+                        <div class="pt-2 border-t border-slate-800/80 space-y-1">
+                            <div class="px-3 text-[10px] font-bold text-slate-400 uppercase">Operación</div>
+                            <a href="{% url 'cotizador:cotizaciones_list' %}" class="block px-3 py-2 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800">Cotizaciones</a>
+                            <a href="{% url 'ordenes_trabajo:proyectos_list' %}" class="block px-3 py-2 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800">Órdenes de Trabajo</a>
+                            <a href="{% url 'compras_gastos:tiempos_list' %}" class="block px-3 py-2 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800">Tiempos MOD</a>
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-800/80 space-y-1">
+                            <div class="px-3 text-[10px] font-bold text-slate-400 uppercase">Finanzas</div>
+                            <a href="{% url 'compras_gastos:facturas_list' %}" class="block px-3 py-2 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800">Compras & Facturas</a>
+                            <a href="{% url 'rentabilidad_cobranzas:dashboard_rentabilidad' %}" class="block px-3 py-2 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800">Rentabilidad & KPIs</a>
+                            <a href="{% url 'rentabilidad_cobranzas:cobranzas_list' %}" class="block px-3 py-2 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800">Cobranzas</a>
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-800/80 space-y-1">
+                            <div class="px-3 text-[10px] font-bold text-slate-400 uppercase">Catálogos</div>
+                            <a href="{% url 'configuracion_base:clientes_list' %}" class="block px-3 py-2 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800">Clientes</a>
+                            <a href="{% url 'configuracion_base:proveedores_list' %}" class="block px-3 py-2 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800">Proveedores</a>
+                            <a href="{% url 'configuracion_base:materiales_list' %}" class="block px-3 py-2 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800">Materiales</a>
+                            {% if user.rol in 'dueno_taller,jefe_taller' %}
+                            <a href="{% url 'configuracion_base:operarios_list' %}" class="block px-3 py-2 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800">Equipo & Operarios</a>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Footer Drawer Móvil -->
+                    <div class="p-4 border-t border-slate-800 bg-slate-950/40 flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-8 h-8 rounded-lg bg-sky-950 text-sky-300 font-bold text-xs flex items-center justify-center border border-sky-800">
+                                {{ user.iniciales }}
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-xs font-bold text-white">{{ user.nombre_completo }}</span>
+                                <span class="text-[10px] text-sky-400">{{ user.get_rol_display }}</span>
+                            </div>
+                        </div>
+                        <a href="{% url 'core_auth:logout' %}" class="text-xs font-semibold text-red-400 hover:underline">Salir</a>
+                    </div>
+                </div>
+            </div>
+    {% endif %}
+
+    {% if user.is_authenticated and user.rol == 'superadmin_saas' %}
+    <!-- Navbar Superior (Superadministrador Global SaaS) -->
+    <nav class="bg-[#0F172A] border-b border-slate-800 sticky top-0 z-50 shadow-md" x-data="{ mobileMenuOpen: false }">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16 gap-4">
+                
+                <!-- Logo & Marca -->
+                <div class="flex items-center space-x-3 flex-shrink-0">
+                    <a href="{% url 'core_auth:dashboard' %}" class="flex items-center space-x-2.5 group">
+                        <div class="w-9 h-9 rounded-lg bg-[#0284C7] flex items-center justify-center font-black text-white text-base shadow-md shadow-sky-500/20 group-hover:bg-sky-500 transition-colors flex-shrink-0">
+                            TL
+                        </div>
+                        <div class="flex flex-col justify-center leading-tight">
+                            <span class="text-base font-bold tracking-tight text-white group-hover:text-sky-300 transition-colors">
+                                Taller<span class="text-[#0284C7]">Logik</span>
+                            </span>
+                            <span class="text-[11px] font-medium text-slate-400 tracking-wide">
+                                SaaS Admin Global
+                            </span>
+                        </div>
+                    </a>
+                </div>
+
+                <!-- Links Superadmin -->
+                <div class="hidden md:flex items-center space-x-1.5">
+                    <a href="{% url 'core_auth:dashboard' %}" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 transition-colors">
+                        Dashboard
+                    </a>
+
+                    <!-- Dropdown: Logs del Sistema -->
+                    <div class="relative" x-data="{ open: false }" @click.outside="open = false">
+                        <button @click="open = !open" class="flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 transition-colors focus:outline-none group">
+                            <span>🖥️ Logs del Sistema</span>
+                            <svg class="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                        <div x-show="open" x-cloak x-transition
+                             class="absolute left-0 mt-1.5 w-52 rounded-xl bg-slate-900 border border-slate-800 shadow-2xl py-1.5 z-50">
+                            <a href="{% url 'core_auth:logs_viewer' %}?tipo=actividad" class="block px-4 py-2 text-sm text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors flex items-center justify-between">
+                                <span>📋 Log de Actividad</span>
+                                <span class="text-[10px] bg-sky-950 text-sky-300 px-1.5 py-0.5 rounded font-mono border border-sky-800">INFO</span>
+                            </a>
+                            <a href="{% url 'core_auth:logs_viewer' %}?tipo=errores" class="block px-4 py-2 text-sm text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors flex items-center justify-between">
+                                <span>⚠️ Log de Errores</span>
+                                <span class="text-[10px] bg-red-950 text-red-300 px-1.5 py-0.5 rounded font-mono border border-red-800">ERROR</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Perfil & Salir -->
+                <div class="hidden md:flex items-center space-x-2.5 flex-shrink-0">
+                    <div class="flex items-center space-x-2.5 bg-slate-900/90 border border-slate-800 px-3 py-1.5 rounded-xl shadow-inner">
+                        <div class="w-8 h-8 rounded-lg bg-purple-950 border border-purple-700/60 text-purple-300 font-bold text-xs flex items-center justify-center shadow-sm flex-shrink-0">
+                            {{ user.iniciales }}
+                        </div>
+                        <div class="flex flex-col text-left leading-tight whitespace-nowrap">
+                            <span class="text-xs font-bold text-white tracking-wide">
+                                {{ user.nombre_completo }}
+                            </span>
+                            <span class="text-[10px] font-semibold text-purple-400">
+                                {{ user.get_rol_display }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <a href="{% url 'core_auth:logout' %}" 
+                       class="px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800/80 hover:bg-red-950/80 hover:text-red-300 hover:border-red-800/80 border border-slate-700/80 transition-all flex items-center space-x-1.5 whitespace-nowrap shadow-sm group">
+                        <svg class="w-3.5 h-3.5 text-slate-400 group-hover:text-red-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                        </svg>
+                        <span>Salir</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    <div class="flex-1 flex flex-col min-w-0">
+    {% endif %}
+
+    {% if not user.is_authenticated %}
+    <div class="flex-1 flex flex-col justify-center">
+    {% endif %}
+
+        <!-- Mensajes General -->
+        {% if messages %}
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 w-full">
+            {% for message in messages %}
+            <div class="mb-3 p-4 rounded-lg text-sm font-medium flex items-center justify-between border shadow-sm
+                {% if message.tags == 'error' %} bg-red-950/80 text-red-200 border-red-800
+                {% else %} bg-sky-950/80 text-sky-200 border-sky-800 {% endif %}">
+                <span>{{ message }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- UNICO BLOQUE CONTENT -->
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            {% block content %}{% endblock %}
+        </main>
+
+        <!-- Footer General -->
+        {% if user.is_authenticated %}
+        <footer class="bg-[#0F172A] border-t border-slate-900 py-4 text-center text-xs text-slate-500 mt-auto">
+            <div class="max-w-7xl mx-auto px-4">
+                TallerLogik SaaS &copy; 2026 - Sistema de Gestión y Costeo para Mueblerías Especializadas
+            </div>
+        </footer>
+        {% endif %}
+
+    {% if user.is_authenticated and user.rol != 'superadmin_saas' %}
+        </div> <!-- Cierra el contenedor derecho -->
+    </div> <!-- Cierra el contenedor principal -->
+    {% else %}
+    </div> <!-- Cierra el contenedor principal para superadmin o anónimo -->
+    {% endif %}
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

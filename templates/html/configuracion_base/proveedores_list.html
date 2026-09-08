@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block title %}Catálogo de Proveedores - TallerLogik{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl">
+        <div>
+            <h1 class="text-2xl font-bold text-white tracking-tight">Directorio de Proveedores</h1>
+            <p class="text-xs text-slate-400 mt-1">Gestión centralizada de insumidores, distribuidoras y ferreterías</p>
+        </div>
+        <a href="{% url 'configuracion_base:proveedor_create' %}" class="inline-flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-[#0284C7] hover:bg-sky-500 transition shadow-lg shadow-sky-500/20">
+            + Nuevo Proveedor
+        </a>
+    </div>
+
+    <!-- Tabla Proveedores -->
+    <div class="bg-[#0F172A] rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-300">
+                <thead class="bg-slate-900 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                    <tr>
+                        <th class="px-6 py-4">Razón Social / Proveedor</th>
+                        <th class="px-6 py-4">RUT / ID Fiscal</th>
+                        <th class="px-6 py-4">Contacto & Teléfono</th>
+                        <th class="px-6 py-4">Datos Bancarios</th>
+                        <th class="px-6 py-4">Ubicación / Dirección</th>
+                        <th class="px-6 py-4 text-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800">
+                    {% for prov in proveedores %}
+                    <tr class="hover:bg-slate-900/50 transition">
+                        <td class="px-6 py-4 font-semibold text-white">
+                            {{ prov.razon_social }}
+                        </td>
+                        <td class="px-6 py-4 text-xs font-mono text-slate-400">
+                            {{ prov.rut_o_identificacion|default:"-" }}
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="font-medium">{{ prov.nombre_contacto|default:"-" }}</div>
+                            {% if prov.telefono_contacto %}
+                            <div class="text-xs text-slate-400">{{ prov.telefono_contacto }}</div>
+                            {% endif %}
+                            {% if prov.correo_contacto %}
+                            <div class="text-xs text-sky-400 font-mono">{{ prov.correo_contacto }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-xs text-slate-300">
+                            {% if prov.banco_nombre %}
+                            <div class="font-semibold text-emerald-400">{{ prov.banco_nombre }}</div>
+                            <div class="text-[11px] text-slate-400">{{ prov.tipo_cuenta|default:"Cta." }} - <span class="font-mono">{{ prov.numero_cuenta|default:"-" }}</span></div>
+                            {% else %}
+                            <span class="text-slate-500 italic">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-xs text-slate-400">
+                            {{ prov.ciudad|default:"" }} {% if prov.comuna %}({{ prov.comuna }}){% endif %}
+                            {% if prov.direccion %}<div class="truncate max-w-xs text-slate-300">{{ prov.direccion }}</div>{% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-right space-x-2 whitespace-nowrap">
+                            <a href="{% url 'configuracion_base:proveedor_update' prov.pk %}" class="inline-flex px-2.5 py-1 rounded-md text-xs font-medium bg-slate-800 text-sky-400 hover:bg-sky-950 border border-slate-700 transition">
+                                Editar
+                            </a>
+                            <form action="{% url 'configuracion_base:proveedor_delete' prov.pk %}" method="POST" class="inline" onsubmit="return confirm('¿Estás seguro de eliminar este proveedor?');">
+                                {% csrf_token %}
+                                <button type="submit" class="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-800 text-red-400 hover:bg-red-950 border border-slate-700 transition">
+                                    Eliminar
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center text-slate-500">
+                            No se registran proveedores aún. ¡Añade tu primer proveedor!
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

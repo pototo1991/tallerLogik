@@ -1,0 +1,77 @@
+<div x-data="{ open: true }" x-show="open" x-cloak class="fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4 text-center sm:p-0">
+        <!-- Backdrop -->
+        <div @click="open = false; $el.closest('.fixed').remove()" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity"></div>
+
+        <!-- Dialog -->
+        <div class="inline-block align-bottom bg-[#0F172A] rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full border border-slate-800 p-6 z-10 relative">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-4 mb-4">
+                <div>
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span>📜</span> Bitácora & Kardex de Movimientos
+                    </h3>
+                    <p class="text-xs text-sky-400 font-medium mt-0.5">{{ material.nombre }} (Stock Actual: {{ material.stock_actual|floatformat:"0" }} {{ material.unidad_medida }})</p>
+                </div>
+                <button type="button" @click="open = false; $el.closest('.fixed').remove()" class="text-slate-400 hover:text-white text-xl font-bold">&times;</button>
+            </div>
+
+            <div class="max-h-96 overflow-y-auto pr-1">
+                <table class="w-full text-left text-xs text-slate-300">
+                    <thead class="bg-slate-900 text-slate-400 font-semibold uppercase tracking-wider sticky top-0 border-b border-slate-800">
+                        <tr>
+                            <th class="px-3 py-2.5">Fecha</th>
+                            <th class="px-3 py-2.5">Operación</th>
+                            <th class="px-3 py-2.5 text-right">Cantidad</th>
+                            <th class="px-3 py-2.5 text-right">Saldo Bodega</th>
+                            <th class="px-3 py-2.5">Usuario / Proyecto</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800">
+                        {% for m in movimientos %}
+                        <tr class="hover:bg-slate-900/50 transition">
+                            <td class="px-3 py-2.5 text-slate-400 font-mono whitespace-nowrap">
+                                {{ m.fecha_movimiento|date:"d/m/Y H:i" }}
+                            </td>
+                            <td class="px-3 py-2.5">
+                                <span class="inline-block px-2 py-0.5 rounded text-[11px] font-semibold whitespace-nowrap
+                                    {% if m.cantidad > 0 %} bg-emerald-950 text-emerald-300 border border-emerald-800
+                                    {% else %} bg-amber-950 text-amber-300 border border-amber-800 {% endif %}">
+                                    {{ m.get_tipo_movimiento_display }}
+                                </span>
+                                {% if m.observaciones %}
+                                <p class="text-[11px] text-slate-400 mt-0.5 italic">{{ m.observaciones }}</p>
+                                {% endif %}
+                            </td>
+                            <td class="px-3 py-2.5 text-right font-mono font-bold whitespace-nowrap {% if m.cantidad > 0 %}text-emerald-400{% else %}text-amber-400{% endif %}">
+                                {% if m.cantidad > 0 %}+{% endif %}{{ m.cantidad|floatformat:"0" }}
+                            </td>
+                            <td class="px-3 py-2.5 text-right font-mono font-bold text-white whitespace-nowrap">
+                                {{ m.stock_resultante|floatformat:"0" }}
+                            </td>
+
+                            <td class="px-3 py-2.5 text-slate-400">
+                                <div>{{ m.id_usuario.nombre_completo }}</div>
+                                {% if m.id_proyecto %}
+                                <div class="text-[11px] text-sky-400 font-semibold">{{ m.id_proyecto.codigo_ot }}</div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="px-3 py-8 text-center text-slate-500 italic">
+                                No se han registrado movimientos de inventario aún para este material.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pt-4 flex justify-end border-t border-slate-800 mt-4">
+                <button type="button" @click="open = false; $el.closest('.closest').remove()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 transition">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

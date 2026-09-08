@@ -1,0 +1,16 @@
+<div id="scraping-progress-container" class="w-full max-w-md bg-emerald-950/20 border border-emerald-800/40 p-4 rounded-xl shadow-lg flex items-start space-x-3 transition duration-300">
+    <div class="flex-shrink-0 bg-emerald-900/50 p-1.5 rounded-lg text-emerald-400 border border-emerald-800/30">
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+    </div>
+    <div class="flex-1 space-y-1">
+        <h4 class="text-sm font-bold text-white leading-tight">¡Sincronización Exitosa!</h4>
+        <p class="text-xs text-slate-400">El catálogo maestro de Imperial se actualizó. Creados: <strong class="text-sky-400 font-mono">{{ creados }}</strong>, Actualizados: <strong class="text-sky-400 font-mono">{{ actualizados }}</strong>.</p>
+        <div class="pt-2">
+            <button class="inline-flex items-center px-2.5 py-1 text-xs font-semibold text-emerald-300 bg-emerald-900/30 hover:bg-emerald-900/50 rounded-lg border border-emerald-800/40 transition" onclick="window.location.reload();">
+                Refrescar Lista
+            </button>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}Catálogo de Materiales - TallerLogik{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div
+        class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl">
+        <div>
+            <h1 class="text-2xl font-bold text-white tracking-tight">Catálogo de Materiales e Insumos</h1>
+            <p class="text-xs text-slate-400 mt-1">Materiales e insumos por unidades comerciales completas y porcentaje
+                de merma por defecto</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+            <a href="{% url 'configuracion_base:materiales_global_buscar' %}"
+                class="inline-flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 transition border border-slate-700 shadow-lg">
+                🔍 Buscar en ...
+            </a>
+            <a href="{% url 'configuracion_base:material_create' %}"
+                class="inline-flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-[#0284C7] hover:bg-sky-500 transition shadow-lg shadow-sky-500/20">
+                + Nuevo Material
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-[#0F172A] rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-300">
+                <thead
+                    class="bg-slate-900 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                    <tr>
+                        <th class="px-4 py-3.5 whitespace-nowrap">Categoría</th>
+                        <th class="px-4 py-3.5 w-auto">Material / Insumo</th>
+                        <th class="px-4 py-3.5 whitespace-nowrap">Proveedor / Contacto</th>
+                        <th class="px-4 py-3.5 whitespace-nowrap">Unidad</th>
+                        <th class="px-4 py-3.5 whitespace-nowrap">Stock Bodega</th>
+                        <th class="px-4 py-3.5 whitespace-nowrap">Costo Neto</th>
+                        <th class="px-4 py-3.5 text-right whitespace-nowrap">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800">
+                    {% for material in materiales %}
+                    <tr class="hover:bg-slate-900/50 transition">
+                        <td class="px-4 py-3.5 whitespace-nowrap">
+                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold
+                                {% if material.categoria == 'Tableros' %} bg-amber-950 text-amber-300 border border-amber-800
+                                {% elif material.categoria == 'Maderas' %} bg-emerald-950 text-emerald-300 border border-emerald-800
+                                {% elif material.categoria == 'Quincalleria' %} bg-sky-950 text-sky-300 border border-sky-800
+                                {% else %} bg-slate-800 text-slate-300 border border-slate-700 {% endif %}">
+                                {{ material.get_categoria_display }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3.5 font-semibold text-white">
+                            {{ material.nombre }}
+                        </td>
+                        <td class="px-4 py-3.5 text-xs whitespace-nowrap">
+                            <span class="px-2 py-0.5 rounded text-[11px] font-semibold inline-block
+                                {% if material.proveedor|lower == 'imperial' %} bg-indigo-950 text-indigo-300 border border-indigo-800
+                                {% else %} bg-slate-800 text-slate-300 border border-slate-700 {% endif %}">
+                                {{ material.proveedor|default:"Propio" }}
+                            </span>
+                            {% if material.observaciones %}
+                            <p class="text-[11px] text-slate-400 mt-0.5 max-w-xs truncate"
+                                title="{{ material.observaciones }}">
+                                💬 {{ material.observaciones }}
+                            </p>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3.5 text-xs font-mono text-slate-300 whitespace-nowrap">
+                            {{ material.unidad_medida }}
+                        </td>
+                        <td class="px-4 py-3.5 text-xs whitespace-nowrap">
+                            <div class="flex items-center gap-2">
+                                <span class="px-2.5 py-1 rounded-lg font-mono font-bold text-xs inline-flex items-center gap-1.5
+                                    {% if material.stock_actual > material.stock_minimo %} bg-emerald-950 text-emerald-300 border border-emerald-800
+                                    {% elif material.stock_actual > 0 %} bg-amber-950 text-amber-300 border border-amber-800
+                                    {% else %} bg-red-950 text-red-400 border border-red-800 {% endif %}">
+                                    <span class="w-1.5 h-1.5 rounded-full {% if material.stock_actual > material.stock_minimo %}bg-emerald-400{% elif material.stock_actual > 0 %}bg-amber-400{% else %}bg-red-400{% endif %}"></span>
+                                    {{ material.stock_actual|floatformat:"0" }} {{ material.unidad_medida }}
+                                </span>
+                            </div>
+                        </td>
+
+                        <td class="px-4 py-3.5 font-mono font-bold text-sky-400 whitespace-nowrap">
+                            {{ material.costo_unitario|clp }}
+                        </td>
+                        <td class="px-4 py-3.5 whitespace-nowrap text-right">
+                            <div class="inline-flex items-center justify-end gap-1.5">
+                                <button type="button"
+                                    hx-get="{% url 'configuracion_base:material_ajustar_stock' material.pk %}"
+                                    hx-target="body" hx-swap="beforeend"
+                                    class="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/20 transition gap-1">
+                                    <span>📦</span> Stock
+                                </button>
+
+                                <button type="button"
+                                    hx-get="{% url 'configuracion_base:material_historial_stock' material.pk %}"
+                                    hx-target="body" hx-swap="beforeend"
+                                    class="inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">
+                                    📜 Kardex
+                                </button>
+                                <a href="{% url 'configuracion_base:material_update' material.pk %}"
+                                    class="inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-sky-400 hover:bg-sky-950 hover:text-sky-300 border border-slate-700 hover:border-sky-700 transition">
+                                    Editar
+                                </a>
+                                <form action="{% url 'configuracion_base:material_delete' material.pk %}" method="POST"
+                                    class="inline-block"
+                                    onsubmit="return confirm('¿Estás seguro de eliminar este material?');">
+                                    {% csrf_token %}
+                                    <button type="submit"
+                                        class="inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-red-400 hover:bg-red-950 hover:text-red-300 border border-slate-700 hover:border-red-700 transition">
+                                        Eliminar
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="px-6 py-12 text-center text-slate-500">
+                            No hay materiales registrados aún. ¡Registra tus tableros, maderas e insumos base!
+                        </td>
+                    </tr>
+
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

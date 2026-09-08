@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}Facturas de Compra - TallerLogik{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl">
+        <div>
+            <h1 class="text-2xl font-bold text-white tracking-tight">Facturas de Compra & Gastos Distribuidos</h1>
+            <p class="text-xs text-slate-400 mt-1">Registro de comprobantes de compras generales y asignación de valores netos a proyectos</p>
+        </div>
+        <a href="{% url 'compras_gastos:factura_create' %}" class="inline-flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-[#0284C7] hover:bg-sky-500 transition shadow-lg shadow-sky-500/20">
+            + Registrar Factura
+        </a>
+    </div>
+
+    <div class="bg-[#0F172A] rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-300">
+                <thead class="bg-slate-900 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                    <tr>
+                        <th class="px-6 py-4">N° Factura / Boleta</th>
+                        <th class="px-6 py-4">Proveedor</th>
+                        <th class="px-6 py-4">Fecha Emisión</th>
+                        <th class="px-6 py-4">Forma de Pago</th>
+                        <th class="px-6 py-4">Proyectos Asignados</th>
+                        <th class="px-6 py-4">Monto Total Neto ($)</th>
+                        <th class="px-6 py-4 text-right">Acción</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800">
+                    {% for fac in facturas %}
+                    <tr class="hover:bg-slate-900/50 transition">
+                        <td class="px-6 py-4 font-mono font-bold text-sky-400">
+                            {{ fac.numero_factura }}
+                        </td>
+                        <td class="px-6 py-4 font-semibold text-white">
+                            {{ fac.proveedor }}
+                        </td>
+                        <td class="px-6 py-4 text-xs text-slate-400">
+                            {{ fac.fecha_emision|date:"d/m/Y" }}
+                        </td>
+                        <td class="px-6 py-4 text-xs">
+                            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold border
+                                {% if fac.forma_pago == 'EFECTIVO' %} bg-emerald-950 text-emerald-300 border-emerald-800
+                                {% elif fac.forma_pago == 'TRANSFERENCIA' %} bg-sky-950 text-sky-300 border-sky-800
+                                {% elif fac.forma_pago == 'TARJETA_CREDITO' %} bg-purple-950 text-purple-300 border-purple-800
+                                {% elif fac.forma_pago == 'CHEQUE' %} bg-amber-950 text-amber-300 border-amber-800
+                                {% else %} bg-slate-800 text-slate-300 border-slate-700 {% endif %}">
+                                {{ fac.get_forma_pago_display }}
+                            </span>
+                            {% if fac.banco_origen %}
+                            <div class="text-[10px] text-slate-400 mt-0.5 font-mono">{{ fac.banco_origen }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-xs font-mono text-slate-300">
+                            <span class="px-2 py-0.5 rounded bg-slate-800 text-sky-300 border border-slate-700">
+                                {{ fac.gastos_distribuidos.count }} OTs
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 font-mono font-bold text-emerald-400">
+                            {{ fac.monto_total_neto|clp }}
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <a href="{% url 'compras_gastos:factura_detail' fac.pk %}" class="inline-flex px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-sky-400 hover:bg-sky-950 border border-slate-700 transition">
+                                Ver Desglose
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center text-slate-500">
+                            No hay facturas de compra registradas aún.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,391 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}Dashboard - TallerLogik{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="{ showUsersModal: false }">
+    <!-- Header Bienvenida -->
+    <div
+        class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+                ¡Hola, {{ usuario.nombre_completo }}!
+            </h1>
+            <p class="text-sm text-slate-400 mt-1">
+                Panel de Administración y Control Operativo
+                {% if empresa %}
+                de <strong class="text-sky-400 font-semibold">{{ empresa.nombre_empresa }}</strong>
+                {% endif %}
+            </p>
+        </div>
+        <div class="flex items-center space-x-3">
+            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-sky-950 text-sky-300 border border-sky-800">
+                Rol: {{ rol_nombre }}
+            </span>
+            {% if user.rol == 'dueno_taller' %}
+            <span
+                class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-300 border border-emerald-800">
+                Dueño del Taller
+            </span>
+            {% endif %}
+            {% if user.rol == 'superadmin_saas' %}
+            <span
+                class="px-3 py-1 rounded-full text-xs font-semibold bg-purple-950 text-purple-300 border border-purple-800">
+                Superadministrador Global SaaS
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if user.rol == 'superadmin_saas' %}
+    <!-- Panel Especial para Superadmin SaaS -->
+    <div class="bg-slate-900 border border-purple-900/50 rounded-2xl p-6 shadow-2xl space-y-4">
+        <div
+            class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800 pb-4">
+            <div>
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    👑 Gestión Global de la Plataforma SaaS
+                </h2>
+                <p class="text-xs text-slate-400 mt-1">Como Administrador Global, desde aquí puedes dar de alta nuevos
+                    Talleres / Empresas y supervisar el sistema.</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <!-- Contenedor del progreso de scraping (HTMX Polling) -->
+                <div id="scraping-progress-placeholder" class="flex items-center"></div>
+
+                <button hx-post="{% url 'configuracion_base:materiales_ejecutar_scraping' %}"
+                        hx-target="#scraping-progress-placeholder"
+                        hx-swap="innerHTML"
+                        class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-semibold text-xs rounded-xl transition flex items-center gap-1.5 cursor-pointer">
+                    🔄 Sincronizar Catálogo
+                </button>
+                <a href="{% url 'core_auth:logs_viewer' %}"
+                    class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-sky-400 border border-sky-800/60 font-semibold text-xs rounded-xl transition flex items-center gap-1.5 shadow-sm">
+                    🖥️ Ver Logs del Sistema
+                </a>
+                <a href="{% url 'core_auth:onboarding' %}"
+                    class="px-4 py-2 bg-[#0284C7] hover:bg-sky-500 text-white font-semibold text-xs rounded-xl shadow-lg transition flex items-center gap-1.5">
+                    ➕ Registrar Nuevo Taller
+                </a>
+                <a href="/admin/" target="_blank"
+                    class="px-4 py-2 bg-purple-950 hover:bg-purple-900 text-purple-300 border border-purple-800 font-semibold text-xs rounded-xl transition flex items-center gap-1.5">
+                    ⚙️ Admin Avanzado (Django Admin)
+                </a>
+
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Tarjeta Empresas Registradas -->
+            <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800 flex justify-between items-center">
+                <div>
+                    <div class="text-xs text-slate-400 uppercase font-semibold">Talleres / Empresas Registrados</div>
+                    <div class="text-3xl font-extrabold text-purple-400 font-mono mt-1">{{ total_empresas }}</div>
+                </div>
+                <div class="text-3xl">🏭</div>
+            </div>
+
+            <!-- Tarjeta Usuarios Totales (Clickable para desplegar lista) -->
+            <div @click="showUsersModal = true"
+                class="bg-slate-950/80 p-4 rounded-xl border border-slate-800 hover:border-sky-500 cursor-pointer flex justify-between items-center transition group shadow-md">
+                <div>
+                    <div class="text-xs text-slate-400 uppercase font-semibold group-hover:text-sky-400 transition">
+                        Usuarios Totales en la Plataforma</div>
+                    <div class="text-3xl font-extrabold text-sky-400 font-mono mt-1">{{ total_usuarios }}</div>
+                    <div class="text-[11px] text-sky-400/80 mt-1 font-semibold flex items-center gap-1">
+                        🔍 Hacer clic para ver lista de usuarios &rarr;
+                    </div>
+                </div>
+                <div class="text-3xl group-hover:scale-110 transition">👥</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE USUARIOS REGISTRADOS EN EL SAAS -->
+    <div x-show="showUsersModal" x-cloak
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm"
+        @keydown.escape.window="showUsersModal = false">
+        <div
+            class="bg-slate-900 border border-slate-700 rounded-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden flex flex-col shadow-2xl">
+            <!-- Modal Header -->
+            <div class="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl">👥</span>
+                    <div>
+                        <h3 class="text-lg font-bold text-white">Usuarios Registrados en la Plataforma SaaS</h3>
+                        <p class="text-xs text-slate-400">Lista completa de cuentas de usuario en el sistema</p>
+                    </div>
+                </div>
+                <button @click="showUsersModal = false"
+                    class="text-slate-400 hover:text-white p-2 text-xl font-bold focus:outline-none">
+                    ✕
+                </button>
+            </div>
+            <!-- Modal Body: Tabla de Usuarios -->
+            <div class="p-5 overflow-y-auto flex-1">
+                <div class="overflow-x-auto rounded-xl border border-slate-800">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-950 text-slate-400 uppercase border-b border-slate-800">
+                            <tr>
+                                <th class="p-3">Nombre Completo</th>
+                                <th class="p-3">Correo Electrónico</th>
+                                <th class="p-3">Rol</th>
+                                <th class="p-3">Empresa / Taller</th>
+                                <th class="p-3">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800 text-slate-300">
+                            {% for u in usuarios_saas %}
+                            <tr class="hover:bg-slate-800/50 transition">
+                                <td class="p-3 font-semibold text-white">{{ u.nombre_completo }}</td>
+                                <td class="p-3 font-mono text-sky-400">{{ u.correo_electronico }}</td>
+                                <td class="p-3">
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold
+                                        {% if u.rol == 'superadmin_saas' %} bg-purple-950 text-purple-300 border border-purple-800
+                                        {% elif u.rol == 'dueno_taller' %} bg-emerald-950 text-emerald-300 border border-emerald-800
+                                        {% else %} bg-slate-800 text-slate-300 {% endif %}">
+                                        {{ u.get_rol_display }}
+                                    </span>
+                                </td>
+                                <td class="p-3 font-medium">
+                                    {% if u.id_empresa %}
+                                    <span class="text-slate-200">{{ u.id_empresa.nombre_empresa }}</span>
+                                    {% else %}
+                                    <span class="text-purple-400 font-semibold">SaaS Global</span>
+                                    {% endif %}
+                                </td>
+                                <td class="p-3">
+                                    {% if u.activo and not u.eliminado_en %}
+                                    <span
+                                        class="px-2 py-0.5 rounded-full text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800 font-semibold">Activo</span>
+                                    {% else %}
+                                    <span
+                                        class="px-2 py-0.5 rounded-full text-[10px] bg-red-950 text-red-400 border border-red-800 font-semibold">Inactivo</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="p-4 text-center text-slate-500">No hay usuarios registrados.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- Modal Footer -->
+            <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-end">
+                <button @click="showUsersModal = false"
+                    class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABLA DE CLIENTES DE LA PLATAFORMA SAAS (TALLERES SUSCRITOS) -->
+    <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    🏢 Clientes de la Plataforma SaaS (Talleres & Mueblerías)
+                </h3>
+                <p class="text-xs text-slate-400 mt-0.5">Listado de empresas clientes del SaaS, fecha de alta, fecha de
+                    baja y control de estado.</p>
+            </div>
+            <span
+                class="px-3 py-1 bg-purple-950 text-purple-300 border border-purple-800 rounded-full text-xs font-semibold">
+                {{ total_empresas }} Empresas
+            </span>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl border border-slate-800">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-slate-900 text-slate-400 uppercase border-b border-slate-800">
+                    <tr>
+                        <th class="p-3">Empresa / Taller</th>
+                        <th class="p-3">RUT / Identificación</th>
+                        <th class="p-3">Correo Usuario Dueño</th>
+                        <th class="p-3">Fecha de Creación</th>
+                        <th class="p-3">Fecha de Baja</th>
+                        <th class="p-3 text-center">Estado (Habilitado / Deshabilitado)</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800 text-slate-300">
+                    {% for emp in empresas_saas %}
+                    <tr class="hover:bg-slate-800/40 transition">
+                        <td class="p-3 font-bold text-white flex items-center gap-2">
+                            <span
+                                class="w-7 h-7 rounded-lg bg-sky-950 text-sky-400 flex items-center justify-center font-bold text-xs border border-sky-800">
+                                {{ emp.nombre_empresa|slice:":2"|upper }}
+                            </span>
+                            {{ emp.nombre_empresa }}
+                        </td>
+                        <td class="p-3 font-mono text-slate-400">{{ emp.rut_o_identificacion|default:"-" }}</td>
+                        <td class="p-3 font-mono text-sky-400">
+                            {% if emp.dueno %}
+                            {{ emp.dueno.correo_electronico }}
+                            {% else %}
+                            <span class="text-slate-500 font-sans italic">Sin dueño asignado</span>
+                            {% endif %}
+                        </td>
+                        <td class="p-3 font-mono text-slate-400">{{ emp.fecha_registro|date:"d/m/Y H:i" }}</td>
+                        <td class="p-3 font-mono">
+                            {% if emp.eliminado_en %}
+                            <span class="text-red-400 font-semibold">{{ emp.eliminado_en|date:"d/m/Y H:i" }}</span>
+                            {% else %}
+                            <span class="text-slate-500">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="p-3 text-center">
+                            <form action="{% url 'core_auth:empresa_toggle_estado' emp.id %}" method="POST"
+                                class="inline-flex items-center gap-2">
+                                {% csrf_token %}
+                                {% if not emp.eliminado_en %}
+                                <span
+                                    class="px-2 py-1 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800 flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                    Habilitado
+                                </span>
+                                <button type="submit"
+                                    class="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-red-950 hover:bg-red-900 text-red-300 border border-red-800 transition">
+                                    Deshabilitar
+                                </button>
+                                {% else %}
+                                <span
+                                    class="px-2 py-1 rounded-full text-[10px] font-bold bg-red-950 text-red-300 border border-red-800 flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> Deshabilitado
+                                </span>
+                                <button type="submit"
+                                    class="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800 transition">
+                                    Habilitar
+                                </button>
+                                {% endif %}
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="p-6 text-center text-slate-500 font-medium">
+                            No hay empresas/talleres registrados actualmente en la plataforma SaaS.
+                            <div class="mt-2">
+                                <a href="{% url 'core_auth:onboarding' %}"
+                                    class="inline-flex items-center gap-1 text-xs text-sky-400 hover:underline">
+                                    Registrar primer taller &rarr;
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- Vista para Usuarios de Taller (Dueño / Jefe / Operario) -->
+
+    <!-- KPI Cards Resumen Financiero -->
+    {% if metricas %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-[#0F172A] p-5 rounded-2xl border border-slate-800 shadow-xl">
+            <div class="text-xs font-semibold text-slate-400 uppercase">Ventas Netas Totales</div>
+            <div class="text-2xl font-extrabold font-mono text-white mt-1">{{ metricas.total_facturado_neto|clp }}</div>
+            <div class="text-xs text-slate-500 mt-1 font-mono">{{ metricas.total_proyectos }} Proyectos / OTs</div>
+        </div>
+        <div class="bg-[#0F172A] p-5 rounded-2xl border border-slate-800 shadow-xl">
+            <div class="text-xs font-semibold text-slate-400 uppercase">Utilidad Neta Taller</div>
+            <div class="text-2xl font-extrabold font-mono text-emerald-400 mt-1">{{ metricas.utilidad_neta_global|clp }}
+            </div>
+            <div class="text-xs text-emerald-400/80 mt-1 font-mono font-semibold">{{ metricas.margen_global_pct }}%
+                Margen sobre Venta</div>
+        </div>
+        <div class="bg-[#0F172A] p-5 rounded-2xl border border-slate-800 shadow-xl">
+            <div class="text-xs font-semibold text-slate-400 uppercase">Total Recaudado / Cobrado</div>
+            <div class="text-2xl font-extrabold font-mono text-sky-400 mt-1">{{ metricas.total_cobrado|clp }}</div>
+            <div class="text-xs text-sky-400/80 mt-1 font-mono font-semibold">Pendiente: {{ metricas.total_saldo_pendiente|clp }}</div>
+        </div>
+        <div
+            class="bg-[#0F172A] p-5 rounded-2xl border shadow-xl {% if metricas.proyectos_sobrecosto > 0 %} border-red-800 bg-red-950/20 {% else %} border-slate-800 {% endif %}">
+            <div class="text-xs font-semibold text-slate-400 uppercase">OTs con Sobrecosto</div>
+            <div
+                class="text-2xl font-extrabold font-mono mt-1 {% if metricas.proyectos_sobrecosto > 0 %} text-red-500 {% else %} text-emerald-400 {% endif %}">
+                {{ metricas.proyectos_sobrecosto }} OTs
+            </div>
+            <div class="text-xs mt-1">
+                {% if metricas.proyectos_sobrecosto > 0 %}<span class="text-red-400 font-semibold">⚠️ Requiere
+                    revisión</span>{% else %}<span class="text-slate-500">✓ En presupuesto</span>{% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Quick Action Cards Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+
+        <!-- Card Cotizador -->
+        <a href="{% url 'cotizador:cotizaciones_list' %}"
+            class="block bg-[#0F172A] p-6 rounded-2xl border border-slate-800 hover:border-sky-500 transition group shadow-lg">
+            <div
+                class="w-12 h-12 rounded-xl bg-sky-950 border border-sky-800 text-sky-400 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition">
+                📝
+            </div>
+            <h3 class="text-lg font-bold text-white mt-4 group-hover:text-sky-400 transition">Cotizador & PDFs</h3>
+            <p class="text-xs text-slate-400 mt-1">Cotizaciones con versiones v1/v2, margen sobre venta y exportación
+                PDF WeasyPrint.</p>
+            <div class="mt-4 text-xs font-semibold text-sky-400 flex items-center">
+                Ver Cotizaciones &rarr;
+            </div>
+        </a>
+
+        <!-- Card OTs / Kanban -->
+        <a href="{% url 'ordenes_trabajo:proyectos_list' %}"
+            class="block bg-[#0F172A] p-6 rounded-2xl border border-slate-800 hover:border-sky-500 transition group shadow-lg">
+            <div
+                class="w-12 h-12 rounded-xl bg-indigo-950 border border-indigo-800 text-indigo-400 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition">
+                📋
+            </div>
+            <h3 class="text-lg font-bold text-white mt-4 group-hover:text-indigo-400 transition">Kanban & OTs</h3>
+            <p class="text-xs text-slate-400 mt-1">Tablero de producción, BOM de materiales y rectificaciones en
+                terreno.</p>
+            <div class="mt-4 text-xs font-semibold text-indigo-400 flex items-center">
+                Ver Tablero OT &rarr;
+            </div>
+        </a>
+
+        <!-- Card Compras & Tiempos -->
+        <a href="{% url 'compras_gastos:facturas_list' %}"
+            class="block bg-[#0F172A] p-6 rounded-2xl border border-slate-800 hover:border-sky-500 transition group shadow-lg">
+            <div
+                class="w-12 h-12 rounded-xl bg-emerald-950 border border-emerald-800 text-emerald-400 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition">
+                🛒
+            </div>
+            <h3 class="text-lg font-bold text-white mt-4 group-hover:text-emerald-400 transition">Compras & Facturas
+            </h3>
+            <p class="text-xs text-slate-400 mt-1">Facturas de compras con desglose neto en vivo y cuadratura estricta.
+            </p>
+            <div class="mt-4 text-xs font-semibold text-emerald-400 flex items-center">
+                Ver Compras &rarr;
+            </div>
+        </a>
+
+        <!-- Card Rentabilidad & KPIs -->
+        <a href="{% url 'rentabilidad_cobranzas:dashboard_rentabilidad' %}"
+            class="block bg-[#0F172A] p-6 rounded-2xl border border-slate-800 hover:border-sky-500 transition group shadow-lg">
+            <div
+                class="w-12 h-12 rounded-xl bg-amber-950 border border-amber-800 text-amber-400 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition">
+                📈
+            </div>
+            <h3 class="text-lg font-bold text-white mt-4 group-hover:text-amber-400 transition">Rentabilidad & KPIs</h3>
+            <p class="text-xs text-slate-400 mt-1">Dashboard de desviación Presupuestado vs. Real y alertas de
+                sobrecosto.</p>
+            <div class="mt-4 text-xs font-semibold text-amber-400 flex items-center">
+                Ver Rentabilidad &rarr;
+            </div>
+        </a>
+
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

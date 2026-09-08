@@ -1,0 +1,205 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}{{ proyecto.codigo_ot }} - Orden de Trabajo TallerLogik{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header OT -->
+    <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center space-x-3">
+                <h1 class="text-2xl font-bold text-white tracking-tight">{{ proyecto.codigo_ot }}</h1>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-950 text-sky-400 border border-sky-800">
+                    Etapa: {{ proyecto.get_estado_display }}
+                </span>
+            </div>
+            <p class="text-base text-slate-200 font-semibold mt-1">{{ proyecto.nombre_proyecto }}</p>
+            <p class="text-xs text-slate-400">Cliente: <strong class="text-white">{{ proyecto.id_cliente.razon_social }}</strong> | Cotización Origen: {{ proyecto.id_cotizacion_origen.numero_cotizacion }} v{{ proyecto.id_cotizacion_origen.version }}</p>
+        </div>
+
+        <div class="flex items-center space-x-4 bg-slate-900 p-4 rounded-xl border border-slate-800">
+            <div>
+                <div class="text-xs text-slate-400">Precio Cotizado Neto</div>
+                <div class="text-lg font-bold font-mono text-emerald-400">{{ proyecto.precio_cotizado|clp }}</div>
+            </div>
+            <div class="border-l border-slate-800 pl-4">
+                <div class="text-xs text-slate-400">Costo Presupuestado (BOM)</div>
+                <div class="text-lg font-bold font-mono text-amber-400">{{ proyecto.costo_presupuestado_total|clp }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cambiar Etapa Productiva (Selector Rápido) -->
+    <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Progreso de la Orden de Trabajo en Taller</h3>
+        <form action="{% url 'ordenes_trabajo:proyecto_cambiar_estado' proyecto.pk %}" method="POST" class="flex flex-wrap items-center gap-3">
+            {% csrf_token %}
+            {% for key, label in proyecto.ESTADOS %}
+            <button type="submit" name="nuevo_estado" value="{{ key }}"
+                    class="px-3.5 py-2 rounded-xl text-xs font-semibold border transition
+                    {% if proyecto.estado == key %} bg-[#0284C7] text-white border-sky-500 shadow-lg shadow-sky-500/20
+                    {% else %} bg-slate-900 text-slate-400 border-slate-800 hover:text-white hover:bg-slate-800 {% endif %}">
+                {{ label }}
+            </button>
+            {% endfor %}
+        </form>
+    </div>
+
+    <!-- BOM de Producción (Lista de Materiales) -->
+    <div class="bg-[#0F172A] rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+            <div>
+                <h3 class="text-base font-bold text-white">BOM de Producción (Bill of Materials)</h3>
+                <p class="text-xs text-slate-400">Lista completa de materiales, mano de obra e insumos asignados a la OT</p>
+            </div>
+            <span class="text-xs text-slate-400 font-mono">{{ items_bom|length }} elementos</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-300">
+                <thead class="bg-slate-900 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                    <tr>
+                        <th class="px-6 py-3">Origen / Estado</th>
+                        <th class="px-6 py-3">Tipo</th>
+                        <th class="px-6 py-3">Descripción del Insumo / Trabajo</th>
+                        <th class="px-6 py-3">Cantidad</th>
+                        <th class="px-6 py-3">Stock Bodega</th>
+                        <th class="px-6 py-3">Costo Unit. ($)</th>
+                        <th class="px-6 py-3">Subtotal ($)</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800">
+                    {% for item in items_bom %}
+                    <tr class="{% if item.agregado_rectificacion %} bg-red-950/20 hover:bg-red-950/40 {% else %} hover:bg-slate-900/50 {% endif %} transition">
+                        <td class="px-6 py-3 whitespace-nowrap">
+                            {% if item.agregado_rectificacion %}
+                            <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-red-950 text-red-300 border border-red-800 shadow whitespace-nowrap">
+                                ⚠️ Agregado por Rectificación en Obra
+                            </span>
+                            {% else %}
+                            <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-800 text-slate-400 border border-slate-700 whitespace-nowrap">
+                                Cotización Original
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-3">
+                            <span class="px-2 py-0.5 rounded text-[11px] font-semibold
+                                {% if item.tipo_item == 'Material' %} bg-amber-950 text-amber-300 border border-amber-800
+                                {% elif item.tipo_item == 'Mano_Obra' %} bg-indigo-950 text-indigo-300 border border-indigo-800
+                                {% else %} bg-slate-800 text-slate-300 border border-slate-700 {% endif %}">
+                                {{ item.get_tipo_item_display }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-3 font-semibold text-white">
+                            {{ item.descripcion }}
+                        </td>
+                        <td class="px-6 py-3 font-mono">
+                            {{ item.cantidad|floatformat:"0" }}
+                        </td>
+                        <td class="px-6 py-3 text-xs whitespace-nowrap">
+                            <div class="flex items-center gap-2">
+                                {% if item.stock_descontado and item.cantidad_descontada_stock >= item.cantidad %}
+                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-950 text-emerald-300 border border-emerald-800">
+                                    📦 Cubierto ({{ item.cantidad_descontada_stock|floatformat:"0" }})
+                                </span>
+                                {% elif item.stock_descontado and item.cantidad_descontada_stock > 0 %}
+                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-950 text-amber-300 border border-amber-800">
+                                    📦 Parcial ({{ item.cantidad_descontada_stock|floatformat:"0" }} / {{ item.cantidad|floatformat:"0" }})
+                                </span>
+
+                                {% elif item.tipo_item == 'Material' or item.tipo_item == 'Insumo' %}
+                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-sky-950 text-sky-300 border border-sky-800">
+                                    🛒 Compra requerida
+                                </span>
+                                {% else %}
+                                <span class="text-slate-500 font-mono text-xs">-</span>
+                                {% endif %}
+
+                                {% if item.tipo_item == 'Material' or item.tipo_item == 'Insumo' %}
+                                <button type="button"
+                                        hx-get="{% url 'ordenes_trabajo:item_asignar_bodega' item.id %}"
+                                        hx-target="body" hx-swap="beforeend"
+                                        class="inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-sky-400 hover:bg-sky-950 hover:text-sky-300 border border-slate-700 hover:border-sky-700 transition">
+                                    📦 Asignar Bodega
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <td class="px-6 py-3 font-mono">
+                            {{ item.costo_unitario|clp }}
+                        </td>
+                        <td class="px-6 py-3 font-mono font-bold text-sky-400">
+                            {{ item.subtotal_costo|clp }}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="px-6 py-8 text-center text-slate-500">
+                            No hay ítems registrados en la producción de esta OT.
+                        </td>
+                    </tr>
+
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Formulario para Agregar Insumo por Rectificación en Terreno -->
+    <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl space-y-4">
+        <div>
+            <h3 class="text-base font-bold text-white flex items-center space-x-2">
+                <span class="text-red-400">⚠️</span>
+                <span>Registrar Ajuste / Rectificación de Medidas en Obra</span>
+            </h3>
+            <p class="text-xs text-slate-400 mt-1">
+                Registra nuevos insumos requeridos tras la medición en terreno por el Jefe de Taller. Los ítems se marcarán automáticamente como "agregados por rectificación" para mantener la trazabilidad del presupuesto original vs. real.
+            </p>
+        </div>
+
+        <form action="{% url 'ordenes_trabajo:rectificacion_create' proyecto.pk %}" method="POST" class="space-y-4">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-1 sm:grid-cols-5 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Tipo Ítem *</label>
+                    {{ rectificacion_form.tipo_item }}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Material Catálogo (Opcional)</label>
+                    {{ rectificacion_form.id_material }}
+                </div>
+                <div class="sm:col-span-3">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Motivo / Descripción Rectificación *</label>
+                    {{ rectificacion_form.descripcion }}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Cantidad *</label>
+                    {{ rectificacion_form.cantidad }}
+                </div>
+                <div x-data="{ costo: '{{ rectificacion_form.costo_unitario.value|default:'' }}' }">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Costo Unit. Net ($) *</label>
+                    <input type="number" step="1" name="costo_unitario" x-model="costo"
+                           value="{{ rectificacion_form.costo_unitario.value|default:'' }}"
+                           class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 font-mono font-bold"
+                           placeholder="15000" required>
+                    <p x-show="costo && parseFloat(costo) > 0" x-cloak class="text-xs text-sky-400 font-mono font-bold mt-1.5 flex items-center gap-1">
+                        <span>💵 Monto:</span>
+                        <span x-text="'$' + Math.round(parseFloat(costo)).toLocaleString('es-CL')"></span>
+                    </p>
+                    {% if rectificacion_form.costo_unitario.errors %}<p class="text-xs text-red-400 mt-1">{{ rectificacion_form.costo_unitario.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+
+            <div class="pt-2 flex justify-end">
+                <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-semibold text-white bg-red-700 hover:bg-red-600 transition shadow-lg shadow-red-700/20">
+                    + Registrar Insumo por Rectificación
+                </button>
+            </div>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

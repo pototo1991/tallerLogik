@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+{% load custom_filters %}
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Cotización {{ cotizacion.numero_cotizacion }} v{{ cotizacion.version }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+            @bottom-right {
+                content: "Página " counter(page) " de " counter(pages);
+                font-size: 9pt;
+                color: #64748b;
+            }
+        }
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            color: #1e293b;
+            font-size: 10pt;
+            line-height: 1.5;
+        }
+        .header {
+            border-bottom: 2px solid #0284c7;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .header-table {
+            width: 100%;
+        }
+        .company-name {
+            font-size: 20pt;
+            font-weight: bold;
+            color: #0f172a;
+        }
+        .company-tagline {
+            font-size: 9pt;
+            color: #0284c7;
+            font-weight: bold;
+        }
+        .quote-title-box {
+            text-align: right;
+        }
+        .quote-number {
+            font-size: 16pt;
+            font-weight: bold;
+            color: #0284c7;
+        }
+        .quote-date {
+            font-size: 9pt;
+            color: #64748b;
+        }
+        .client-box {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 20px;
+        }
+        .client-title {
+            font-size: 9pt;
+            font-weight: bold;
+            color: #64748b;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .client-name {
+            font-size: 12pt;
+            font-weight: bold;
+            color: #0f172a;
+        }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+        }
+        .items-table th {
+            background-color: #0f172a;
+            color: #ffffff;
+            font-size: 9pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            padding: 8px 10px;
+            text-align: left;
+        }
+        .items-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 9.5pt;
+        }
+        .items-table tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .totals-box {
+            width: 40%;
+            margin-left: auto;
+            border: 1px solid #0284c7;
+            border-radius: 6px;
+            padding: 12px;
+            background-color: #f0f9ff;
+        }
+        .total-row {
+            display: table-row;
+        }
+        .total-label {
+            font-size: 10pt;
+            font-weight: bold;
+            color: #0f172a;
+        }
+        .total-amount {
+            font-size: 14pt;
+            font-weight: bold;
+            color: #0284c7;
+            text-align: right;
+        }
+        .notes-box {
+            margin-top: 30px;
+            padding: 12px;
+            background-color: #f8fafc;
+            border-left: 4px solid #0284c7;
+            font-size: 9pt;
+            color: #334155;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Cabecera de la Propuesta -->
+    <div class="header">
+        <table class="header-table">
+            <tr>
+                <td>
+                    <div class="company-name">{{ empresa.nombre_empresa }}</div>
+                    <div class="company-tagline">MUEBLERÍA ESPECIALIZADA & TALLER A MEDIDA</div>
+                    {% if empresa.rut_o_identificacion %}
+                    <div style="font-size: 8pt; color: #64748b;">RUT: {{ empresa.rut_o_identificacion }}</div>
+                    {% endif %}
+                </td>
+                <td class="quote-title-box">
+                    <div class="quote-number">PROPUESTA COMERCIAL</div>
+                    <div style="font-size: 11pt; font-weight: bold; color: #334155;">{{ cotizacion.numero_cotizacion }} (v{{ cotizacion.version }})</div>
+                    <div class="quote-date">Fecha Emisión: {{ cotizacion.fecha_creacion|date:"d/m/Y" }}</div>
+                    <div class="quote-date">Validez: {{ cotizacion.dias_validez }} días</div>
+                    <div class="quote-date" style="font-weight: bold; color: #0284c7;">Entrega Estimada: {{ cotizacion.fecha_entrega_sugerida|date:"d/m/Y" }}</div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Datos del Cliente -->
+    <div class="client-box">
+        <div class="client-title">Presupuesto Preparado Para:</div>
+        <div class="client-name">{{ cliente.razon_social }}</div>
+        <div style="font-size: 9.5pt; color: #475569;">
+            {% if cliente.nombre_contacto %}Contacto: {{ cliente.nombre_contacto }} | {% endif %}
+            {% if cliente.correo_contacto %}Email: {{ cliente.correo_contacto }} | {% endif %}
+            {% if cliente.telefono_contacto %}Teléfono: {{ cliente.telefono_contacto }}{% endif %}
+        </div>
+        <div style="margin-top: 6px; font-weight: bold; color: #0284c7;">
+            Propuesta: {{ cotizacion.titulo_propuesta }}
+        </div>
+    </div>
+
+    <!-- Tabla de Ítems -->
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th style="width: 15%;">Tipo</th>
+                <th style="width: 55%;">Descripción del Ítem / Detalle</th>
+                <th style="width: 15%; text-align: center;">Cantidad</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td><strong>{{ item.get_tipo_item_display }}</strong></td>
+                <td>{{ item.descripcion }}</td>
+                <td style="text-align: center;">{{ item.cantidad|cantidad_format }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3" style="text-align: center; color: #94a3b8;">Sin detalles cargados</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Cuadro de Totales -->
+    <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td style="width: 55%; vertical-align: top;">
+                {% if cotizacion.notas_condiciones %}
+                <div class="notes-box">
+                    <strong>Condiciones Comerciales & Notas:</strong><br>
+                    {{ cotizacion.notas_condiciones|linebreaks }}
+                </div>
+                {% endif %}
+            </td>
+            <td style="width: 45%; vertical-align: top;">
+                <div class="totals-box">
+                    <table style="width: 100%;">
+                        <tr>
+                            <td class="total-label">PRECIO VENTA NETO:</td>
+                            <td class="total-amount">{{ cotizacion.precio_venta_neto|clp }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <div style="margin-top: 40px; text-align: center; font-size: 8pt; color: #94a3b8; border-t: 1px solid #e2e8f0; padding-top: 10px;">
+        Documento generado automáticamente por TallerLogik SaaS - Mueblerías y Talleres a Medida.
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+
+{% block title %}Registrar Nuevo Taller - TallerLogik{% endblock %}
+
+{% block content %}
+<div class="min-h-[85vh] flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-xl w-full bg-[#0F172A] p-8 rounded-2xl border border-slate-800 shadow-2xl space-y-6"
+        x-data="rutOnboarding()">
+        <div class="text-center">
+            <div
+                class="mx-auto w-12 h-12 rounded-xl bg-[#0284C7] flex items-center justify-center font-bold text-xl text-white shadow-lg shadow-sky-500/20 mb-3">
+                TL
+            </div>
+            <h2 class="text-3xl font-extrabold text-white tracking-tight">Registrar Nuevo Taller</h2>
+            <p class="mt-1 text-sm text-slate-400">Alta de nueva empresa/taller a medida y asignación de su usuario
+                Dueño de Taller (Nivel 2).</p>
+        </div>
+
+        <form class="space-y-4" method="POST" action="{% url 'core_auth:onboarding' %}" novalidate>
+            {% csrf_token %}
+
+            <div>
+                <label for="{{ form.nombre_empresa.id_for_label }}"
+                    class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                    {{ form.nombre_empresa.label }} *
+                </label>
+                {{ form.nombre_empresa }}
+                {% if form.nombre_empresa.errors %}
+                <p class="text-xs text-red-400 mt-1">{{ form.nombre_empresa.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div>
+                <label for="{{ form.rut_o_identificacion.id_for_label }}"
+                    class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                    {{ form.rut_o_identificacion.label }} * <span
+                        class="normal-case text-[11px] text-slate-400 font-normal">(Formato: 12345678-9)</span>
+                </label>
+                {{ form.rut_o_identificacion }}
+
+                <!-- Feedback Módulo 11 en Vivo -->
+                <div class="mt-1 flex items-center justify-between text-xs">
+                    <span x-text="mensajeRut" :class="{
+                              'text-emerald-400 font-semibold': rutValido === true,
+                              'text-red-400 font-semibold': rutValido === false,
+                              'text-slate-400': rutValido === null
+                          }">
+
+                    </span>
+                </div>
+
+                {% if form.rut_o_identificacion.errors %}
+                <p class="text-xs text-red-400 mt-1 font-semibold">{{ form.rut_o_identificacion.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <hr class="border-slate-800 my-4" />
+
+            <div>
+                <label for="{{ form.nombre_dueno.id_for_label }}"
+                    class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                    {{ form.nombre_dueno.label }} *
+                </label>
+                {{ form.nombre_dueno }}
+                {% if form.nombre_dueno.errors %}
+                <p class="text-xs text-red-400 mt-1">{{ form.nombre_dueno.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div>
+                <label for="{{ form.correo_electronico.id_for_label }}"
+                    class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                    {{ form.correo_electronico.label }} *
+                </label>
+                {{ form.correo_electronico }}
+                {% if form.correo_electronico.errors %}
+                <p class="text-xs text-red-400 mt-1 font-semibold">{{ form.correo_electronico.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div>
+                <label for="{{ form.password.id_for_label }}"
+                    class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                    {{ form.password.label }} *
+                </label>
+                {{ form.password }}
+                {% if form.password.errors %}
+                <p class="text-xs text-red-400 mt-1">{{ form.password.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div class="pt-4">
+                <button type="submit"
+                    class="w-full py-3.5 px-4 rounded-xl text-sm font-semibold text-white bg-[#0284C7] hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500 transition shadow-lg shadow-sky-500/20">
+                    Crear Taller y Cuenta de Administrador
+                </button>
+            </div>
+        </form>
+
+        <div class="text-center pt-3 border-t border-slate-800">
+            <a href="{% url 'core_auth:dashboard' %}"
+                class="font-medium text-xs text-[#0284C7] hover:text-sky-400 transition inline-flex items-center gap-1">
+                &larr; Volver al Dashboard SaaS
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    function rutOnboarding() {
+        return {
+            rut: '{{ form.rut_o_identificacion.value|default:"" }}',
+            rutValido: null,
+            mensajeRut: 'Formato requerido: 12345678-9 (ejemplo: 12345678-9)',
+
+            init() {
+                if (this.rut) {
+                    this.formatRut();
+                }
+            },
+
+            formatRut() {
+                let clean = this.rut.replace(/[^0-9kK]/g, '').toUpperCase();
+                if (clean.length > 9) clean = clean.slice(0, 9);
+
+                if (clean.length > 1) {
+                    const cuerpo = clean.slice(0, -1);
+                    const dv = clean.slice(-1);
+                    this.rut = cuerpo + '-' + dv;
+                } else {
+                    this.rut = clean;
+                }
+
+                this.validarRut();
+            },
+
+            validarRut() {
+                const clean = this.rut.replace(/[^0-9kK]/g, '').toUpperCase();
+                if (!clean) {
+                    this.rutValido = null;
+                    this.mensajeRut = 'Formato requerido: 12345678-9 (ejemplo: 12345678-9)';
+                    return;
+                }
+
+                if (clean.length < 8 || clean.length > 9) {
+                    this.rutValido = false;
+                    this.mensajeRut = '❌ El RUT o Identificación Fiscal ingresado no es válido.';
+                    return;
+                }
+
+                const cuerpo = clean.slice(0, -1);
+                const dv = clean.slice(-1);
+
+                if (!/^\d+$/.test(cuerpo)) {
+                    this.rutValido = false;
+                    this.mensajeRut = '❌ El RUT o Identificación Fiscal ingresado no es válido.';
+                    return;
+                }
+
+                let suma = 0;
+                let mult = 2;
+                for (let i = cuerpo.length - 1; i >= 0; i--) {
+                    suma += parseInt(cuerpo.charAt(i)) * mult;
+                    mult = mult === 7 ? 2 : mult + 1;
+                }
+
+                const resto = suma % 11;
+                const diff = 11 - resto;
+                let dvEsperado = '';
+                if (diff === 11) dvEsperado = '0';
+                else if (diff === 10) dvEsperado = 'K';
+                else dvEsperado = String(diff);
+
+                if (dv === dvEsperado) {
+                    this.rutValido = true;
+                    this.mensajeRut = '✓ RUT válido (Módulo 11 verificado)';
+                } else {
+                    this.rutValido = false;
+                    this.mensajeRut = '❌ El RUT o Identificación Fiscal ingresado no es válido.';
+                }
+            }
+        }
+    }
+</script>
+{% endblock %}

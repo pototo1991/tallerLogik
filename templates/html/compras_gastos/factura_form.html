@@ -1,0 +1,338 @@
+{% extends 'base.html' %}
+
+{% block title %}Registrar Factura de Compra - TallerLogik{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6" x-data="facturaCompraApp()">
+
+    <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-white tracking-tight">Registrar Factura de Compra</h1>
+            <p class="text-xs text-slate-400 mt-1">Ingreso de comprobante y distribución de montos netos a proyectos
+                activos</p>
+        </div>
+        <a href="{% url 'compras_gastos:facturas_list' %}"
+            class="text-xs font-semibold text-slate-400 hover:text-white transition">
+            &larr; Volver a Facturas
+        </a>
+    </div>
+
+    <form method="POST" class="space-y-6" @submit="validarCuadratura($event)">
+        {% csrf_token %}
+
+        <!-- Cabecera de Factura -->
+        <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl space-y-4">
+            <h3 class="text-base font-bold text-white border-b border-slate-800 pb-2">1. Datos del Comprobante / Factura
+            </h3>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">N° Factura / Boleta *</label>
+                    {{ header_form.numero_factura }}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Proveedor Registrado</label>
+                    {{ header_form.id_proveedor }}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Razón Social (o texto libre)</label>
+                    {{ header_form.proveedor }}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Fecha Emisión *</label>
+                    {{ header_form.fecha_emision }}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Forma de Pago *</label>
+                    {{ header_form.forma_pago }}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Banco / Institución</label>
+                    {{ header_form.banco_origen }}
+                </div>
+                <div class="sm:col-span-3">
+                    <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Monto Total Neto ($) *</label>
+                    <input type="number" step="1" name="monto_total_neto" x-model.number="montoTotalNeto"
+                        class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono font-bold focus:outline-none focus:border-sky-500"
+                        placeholder="150000" required>
+                    <p x-show="montoTotalNeto > 0"
+                        class="text-xs text-sky-400 font-mono font-bold mt-1.5 flex items-center gap-1">
+                        <span>💵 Monto:</span>
+                        <span x-text="'$' + Math.round(montoTotalNeto).toLocaleString('es-CL')"></span>
+                    </p>
+                </div>
+                <div class="sm:col-span-3">
+                    <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Observaciones</label>
+                    {{ header_form.observaciones }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Indicador de Cuadratura en Vivo -->
+        <div class="p-4 rounded-2xl border transition flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg"
+            :class="estaCuadrado ? 'bg-emerald-950/80 border-emerald-800 text-emerald-200' : 'bg-red-950/80 border-red-800 text-red-200'">
+            <div class="flex items-center space-x-3">
+                <span class="text-2xl" x-text="estaCuadrado ? '✅' : '⚠️'"></span>
+                <div>
+                    <div class="font-bold text-sm"
+                        x-text="estaCuadrado ? 'Factura Cuadrada Correctamente' : 'Cuadratura Pendiente'"></div>
+                    <div class="text-xs opacity-90" x-text="mensajeCuadratura"></div>
+                </div>
+            </div>
+            <div class="text-right font-mono">
+                <div class="text-xs opacity-75">Suma Distribuida / Total Neto</div>
+                <div class="text-lg font-bold">
+                    $<span x-text="Math.round(sumaDistribuidos).toLocaleString('es-CL')"></span> / $<span
+                        x-text="Math.round(montoTotalNeto).toLocaleString('es-CL')"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Desglose por Proyectos Activos -->
+        <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                <div>
+                    <h3 class="text-base font-bold text-white">2. Distribución de Montos Netos por Proyecto</h3>
+                    <p class="text-xs text-slate-400">Asigna qué parte del total neto corresponde a cada Orden de
+                        Trabajo y a sus materiales / insumos</p>
+                </div>
+                <button type="button" @click="agregarProyecto()"
+                    class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-950 text-sky-300 border border-sky-800 hover:bg-sky-900 transition">
+                    + Añadir Proyecto
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <template x-for="(pSelect, pIndex) in proyectosSeleccionados" :key="pIndex">
+                    <div class="p-4 bg-slate-900 rounded-2xl border border-slate-800 space-y-4 relative">
+                        <!-- Fila de Selección del Proyecto -->
+                        <div
+                            class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
+                            <div class="flex-1 max-w-xl">
+                                <label class="block text-[11px] font-semibold text-slate-400 mb-1">Proyecto / OT
+                                    *</label>
+                                <select x-model="pSelect.proyecto_id" @change="cargarItemsProyecto(pIndex)"
+                                    class="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none"
+                                    required>
+                                    <option value="">-- Seleccionar OT --</option>
+                                    {% for p in proyectos %}
+                                    <option value="{{ p.id }}">{{ p.codigo_ot }} - {{ p.nombre_proyecto }} ({{
+                                        p.id_cliente.razon_social }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="pt-4 sm:pt-0">
+                                <button type="button" @click="eliminarProyecto(pIndex)"
+                                    class="text-xs text-red-400 hover:text-red-300 font-semibold"
+                                    x-show="proyectosSeleccionados.length > 1">
+                                    &times; Quitar Proyecto
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Lista Pequeña de Ítems del Proyecto -->
+                        <div x-show="pSelect.proyecto_id" class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Ítems de
+                                    Producción & Gastos Asignados</h4>
+                                <button type="button" @click="agregarItemExtra(pIndex)"
+                                    class="px-2.5 py-1 rounded-md text-[10px] font-semibold bg-sky-950 text-sky-300 border border-sky-800 hover:bg-sky-900 transition">
+                                    + Añadir Ítem Extra
+                                </button>
+                            </div>
+
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-xs border-collapse">
+                                    <thead>
+                                        <tr class="border-b border-slate-800 text-slate-400 font-semibold">
+                                            <th class="py-2 pr-2 w-5/12">Descripción del Ítem</th>
+                                            <th class="py-2 px-2 w-3/12">Tipo de Gasto</th>
+                                            <th class="py-2 pl-2 w-3/12">Monto Neto ($) *</th>
+                                            <th class="py-2 w-[40px] text-center"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-800/50">
+                                        <template x-for="(item, itemIndex) in pSelect.items" :key="itemIndex">
+                                            <tr class="align-middle">
+                                                <!-- Inputs Ocultos del Formulario Django para mantener listas paralelas -->
+                                                <input type="hidden" name="desglose_proyecto_id"
+                                                    :value="pSelect.proyecto_id">
+                                                <input type="hidden" name="desglose_item_id" :value="item.id">
+
+                                                <td class="py-2 pr-2">
+                                                    <template x-if="!item.es_nuevo">
+                                                        <div class="py-1.5">
+                                                            <span class="text-slate-200 font-semibold"
+                                                                x-text="item.descripcion"></span>
+                                                            <input type="hidden" name="desglose_descripcion"
+                                                                :value="item.descripcion">
+                                                        </div>
+                                                    </template>
+                                                    <template x-if="item.es_nuevo">
+                                                        <input type="text" name="desglose_descripcion"
+                                                            x-model="item.descripcion"
+                                                            placeholder="Ej: Planchas MDF extra, Herrajes"
+                                                            class="w-full px-2.5 py-1 bg-slate-800 border border-slate-700 rounded text-xs text-white focus:outline-none"
+                                                            required>
+                                                    </template>
+                                                </td>
+
+                                                <td class="py-2 px-2">
+                                                    <template x-if="!item.es_nuevo">
+                                                        <div class="py-1.5">
+                                                            <span
+                                                                class="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-300"
+                                                                x-text="item.tipo_gasto"></span>
+                                                            <input type="hidden" name="desglose_tipo_gasto"
+                                                                :value="item.tipo_gasto">
+                                                        </div>
+                                                    </template>
+                                                    <template x-if="item.es_nuevo">
+                                                        <select name="desglose_tipo_gasto" x-model="item.tipo_gasto"
+                                                            class="w-full px-2.5 py-1 bg-slate-800 border border-slate-700 rounded text-xs text-white focus:outline-none">
+                                                            <option value="Material">Material</option>
+                                                            <option value="Insumo">Insumo</option>
+                                                            <option value="Servicio_Tercero">Servicio Tercero</option>
+                                                            <option value="Ferreteria_Imprevista">Ferretería Imprevista
+                                                            </option>
+                                                            <option value="Flete">Flete</option>
+                                                            <option value="Subcontrato">Subcontrato</option>
+                                                        </select>
+                                                    </template>
+                                                </td>
+
+                                                <td class="py-2 pl-2">
+                                                    <input type="number" step="1" name="desglose_monto"
+                                                        x-model.number="item.monto"
+                                                        class="w-full px-2.5 py-1 bg-slate-800 border border-slate-700 rounded text-xs text-white font-mono font-bold focus:outline-none"
+                                                        placeholder="100000" required>
+                                                    <div x-show="item.monto > 0"
+                                                        class="text-[10px] text-sky-400 font-mono font-semibold mt-0.5"
+                                                        x-text="'$' + Math.round(item.monto).toLocaleString('es-CL')">
+                                                    </div>
+                                                </td>
+
+                                                <td class="py-2 text-center">
+                                                    <button type="button" @click="eliminarItem(pIndex, itemIndex)"
+                                                        class="text-red-400 hover:text-red-300 font-bold text-lg"
+                                                        title="Quitar ítem">
+                                                        &times;
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="pSelect.items.length === 0">
+                                            <tr>
+                                                <td colspan="4" class="py-4 text-center text-slate-500 italic">
+                                                    Cargando ítems o esta OT no posee ítems registrados...
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <div class="flex justify-end space-x-3">
+            <a href="{% url 'compras_gastos:facturas_list' %}"
+                class="px-5 py-3 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 transition">
+                Cancelar
+            </a>
+            <button type="submit" :disabled="!estaCuadrado"
+                class="px-6 py-3 rounded-xl text-xs font-bold text-white transition shadow-lg"
+                :class="estaCuadrado ? 'bg-[#0284C7] hover:bg-sky-500 shadow-sky-500/20' : 'bg-slate-700 text-slate-500 cursor-not-allowed'">
+                Guardar Factura & Gastos
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function facturaCompraApp() {
+        return {
+            montoTotalNeto: 0,
+            proyectosSeleccionados: [
+                { proyecto_id: '', items: [] }
+            ],
+            get sumaDistribuidos() {
+                let total = 0;
+                this.proyectosSeleccionados.forEach(p => {
+                    p.items.forEach(it => {
+                        total += parseFloat(it.monto) || 0;
+                    });
+                });
+                return total;
+            },
+            get estaCuadrado() {
+                return this.montoTotalNeto > 0 && Math.abs(this.sumaDistribuidos - this.montoTotalNeto) < 0.01;
+            },
+            get mensajeCuadratura() {
+                if (this.montoTotalNeto <= 0) return 'Ingresa el monto total neto de la factura para comenzar.';
+                const diff = this.montoTotalNeto - this.sumaDistribuidos;
+                if (Math.abs(diff) < 0.01) return 'El total de la factura coincide exactamente con la suma asignada a los proyectos.';
+                const diffFmt = Math.round(Math.abs(diff)).toLocaleString('es-CL');
+                if (diff > 0) return `Faltan $${diffFmt} netos por asignar a proyectos.`;
+                return `El desglose sobrepasa el total de la factura por $${diffFmt}.`;
+            },
+            agregarProyecto() {
+                this.proyectosSeleccionados.push({ proyecto_id: '', items: [] });
+            },
+            eliminarProyecto(index) {
+                if (this.proyectosSeleccionados.length > 1) {
+                    this.proyectosSeleccionados.splice(index, 1);
+                }
+            },
+            cargarItemsProyecto(index) {
+                const proyectoId = this.proyectosSeleccionados[index].proyecto_id;
+                if (!proyectoId) {
+                    this.proyectosSeleccionados[index].items = [];
+                    return;
+                }
+
+                fetch(`/ordenes-trabajo/api/proyectos/${proyectoId}/items/`)
+                    .then(res => {
+                        if (!res.ok) throw new Error("Error consultando la API");
+                        return res.json();
+                    })
+                    .then(data => {
+                        this.proyectosSeleccionados[index].items = data.items.map(item => ({
+                            id: item.id,
+                            descripcion: item.descripcion,
+                            tipo_gasto: item.tipo_item,
+                            monto: 0,
+                            es_nuevo: false
+                        }));
+                    })
+                    .catch(err => {
+                        console.error("Error al cargar ítems del proyecto:", err);
+                        this.proyectosSeleccionados[index].items = [];
+                    });
+            },
+            agregarItemExtra(proyectoIndex) {
+                this.proyectosSeleccionados[proyectoIndex].items.push({
+                    id: '',
+                    descripcion: '',
+                    tipo_gasto: 'Material',
+                    monto: 0,
+                    es_nuevo: true
+                });
+            },
+            eliminarItem(proyectoIndex, itemIndex) {
+                this.proyectosSeleccionados[proyectoIndex].items.splice(itemIndex, 1);
+            },
+            validarCuadratura(event) {
+                if (!this.estaCuadrado) {
+                    event.preventDefault();
+                    alert('La distribución por proyectos debe cuadrar exactamente con el total neto de la factura.');
+                }
+            }
+        }
+    }
+</script>
+{% endblock %}

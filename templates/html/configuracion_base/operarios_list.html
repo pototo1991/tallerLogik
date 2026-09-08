@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}Equipo del Taller - TallerLogik{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="{
+    resetModalOpen: false,
+    resetTargetId: '',
+    resetTargetNombre: '',
+    resetActionUrl: '',
+    resetPasswordInput: '',
+    resetPasswordError: null,
+    openResetModal(id, nombre, url) {
+        this.resetTargetId = id;
+        this.resetTargetNombre = nombre;
+        this.resetActionUrl = url;
+        this.resetPasswordInput = '';
+        this.resetPasswordError = null;
+        this.resetModalOpen = true;
+    },
+    validarPasswordModal(event) {
+        if (!this.resetPasswordInput || this.resetPasswordInput.trim().length < 8) {
+            event.preventDefault();
+            this.resetPasswordError = 'La contraseña no puede quedar vacía y debe tener al menos 8 caracteres.';
+        } else {
+            this.resetPasswordError = null;
+        }
+    }
+}">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl">
+        <div>
+            <h1 class="text-2xl font-bold text-white tracking-tight">Equipo & Tarifas MOD (Mano de Obra Directa)</h1>
+            <p class="text-xs text-slate-400 mt-1">Personal registrado en el taller y su tarifa base de costo por hora operario</p>
+        </div>
+        {% if user.rol in 'superadmin_saas,dueno_taller' %}
+        <a href="{% url 'configuracion_base:operario_create' %}" class="inline-flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-[#0284C7] hover:bg-sky-500 transition shadow-lg shadow-sky-500/20">
+            + Nuevo Miembro
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Tabla del Personal -->
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-300">
+                <thead class="bg-slate-900 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                    <tr>
+                        <th class="px-4 py-3.5 whitespace-nowrap">Nombre Completo</th>
+                        <th class="px-4 py-3.5 whitespace-nowrap">Correo Electrónico</th>
+                        <th class="px-4 py-3.5 whitespace-nowrap">Rol en el Taller</th>
+                        <th class="px-4 py-3.5 whitespace-nowrap">Costo/Hora ($)</th>
+                        <th class="px-4 py-3.5 whitespace-nowrap">Estado</th>
+                        <th class="px-4 py-3.5 text-right whitespace-nowrap">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800">
+                    {% for op in operarios %}
+                    <tr class="hover:bg-slate-900/50 transition">
+                        <td class="px-4 py-3.5 font-semibold text-white">
+                            {{ op.nombre_completo }}
+                        </td>
+                        <td class="px-4 py-3.5 text-xs font-mono text-slate-400">
+                            {{ op.correo_electronico }}
+                        </td>
+                        <td class="px-4 py-3.5 whitespace-nowrap">
+                            <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap
+                                {% if op.rol == 'dueno_taller' %} bg-emerald-950 text-emerald-300 border border-emerald-800
+                                {% elif op.rol == 'jefe_taller' %} bg-amber-950 text-amber-300 border border-amber-800
+                                {% else %} bg-slate-800 text-slate-300 border border-slate-700 {% endif %}">
+                                {{ op.get_rol_display }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3.5 font-mono font-bold text-emerald-400 whitespace-nowrap">
+                            {{ op.costo_hora|clp }} / hr
+                        </td>
+                        <td class="px-4 py-3.5 text-xs whitespace-nowrap">
+                            {% if op.activo %}
+                            <span class="text-emerald-400 font-semibold flex items-center gap-1.5 whitespace-nowrap">
+                                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Activo
+                            </span>
+                            {% else %}
+                            <span class="text-red-400 font-semibold flex items-center gap-1.5 whitespace-nowrap">
+                                <span class="w-2 h-2 rounded-full bg-red-400"></span> Inactivo
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3.5 text-right space-x-2 whitespace-nowrap">
+                            <!-- Botón Editar Datos del Miembro (Dueño o Superadmin) -->
+                            {% if user.rol in 'superadmin_saas,dueno_taller' %}
+                            <a href="{% url 'configuracion_base:operario_update' op.id %}"
+                               class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-300 bg-slate-800 border border-slate-700 hover:bg-slate-700 hover:text-white transition whitespace-nowrap">
+                                ✏️ Editar
+                            </a>
+                            {% endif %}
+
+                            <!-- Botón Restablecer Contraseña (Dueño o Jefe de Taller) -->
+                            {% if user.rol in 'superadmin_saas,dueno_taller,jefe_taller' %}
+                            <button type="button"
+                                    @click="openResetModal('{{ op.id }}', '{{ op.nombre_completo|escapejs }}', '{% url 'configuracion_base:operario_reset_password' op.id %}')"
+                                    class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold text-sky-400 bg-sky-950/60 border border-sky-800 hover:bg-sky-900 hover:text-sky-200 transition whitespace-nowrap">
+                                🔑 Restablecer Clave
+                            </button>
+                            {% endif %}
+
+                            <!-- Botón Activar/Desactivar (EXCLUSIVO SOLO Dueño del Taller o Superadmin) -->
+                            {% if user.rol in 'superadmin_saas,dueno_taller' %}
+                                {% if op.id == user.id %}
+                                <span class="inline-block px-2.5 py-1 text-xs text-slate-500 italic whitespace-nowrap">
+                                    (Tu usuario)
+                                </span>
+                                {% else %}
+                                <form method="POST" action="{% url 'configuracion_base:operario_toggle_activo' op.id %}" class="inline">
+                                    {% csrf_token %}
+                                    {% if op.activo %}
+                                    <button type="submit" 
+                                            onclick="return confirm('¿Confirmas que deseas DESACTIVAR al usuario {{ op.nombre_completo|escapejs }}?')"
+                                            class="px-2.5 py-1 rounded-lg text-xs font-semibold text-red-400 bg-red-950/60 border border-red-800 hover:bg-red-900 hover:text-red-200 transition whitespace-nowrap">
+                                        Desactivar
+                                    </button>
+                                    {% else %}
+                                    <button type="submit" 
+                                            class="px-2.5 py-1 rounded-lg text-xs font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-800 hover:bg-emerald-900 hover:text-emerald-200 transition whitespace-nowrap">
+                                        Activar
+                                    </button>
+                                    {% endif %}
+                                </form>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-4 py-12 text-center text-slate-500">
+                            No hay miembros registrados aún en este taller.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal Modal Interactivo de Restablecimiento de Contraseña -->
+    <div x-show="resetModalOpen" x-cloak class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <!-- Backdrop -->
+            <div x-show="resetModalOpen" x-transition.opacity @click="resetModalOpen = false" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity"></div>
+
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <!-- Modal Dialog -->
+            <div x-show="resetModalOpen" x-transition class="inline-block align-bottom bg-[#0F172A] rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-slate-800">
+                <form :action="resetActionUrl" method="POST" @submit="validarPasswordModal($event)" class="p-6 space-y-4">
+                    {% csrf_token %}
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                            <span>🔑</span> Restablecer Contraseña
+                        </h3>
+                        <button type="button" @click="resetModalOpen = false" class="text-slate-400 hover:text-white text-lg font-bold">&times;</button>
+                    </div>
+
+                    <p class="text-xs text-slate-300">
+                        Vas a asignar una nueva contraseña para el usuario <strong class="text-sky-400 font-semibold" x-text="resetTargetNombre"></strong>.
+                    </p>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                            Nueva Contraseña * (No puede quedar vacía)
+                        </label>
+                        <input type="password" 
+                               name="password" 
+                               x-model="resetPasswordInput" 
+                               placeholder="Mínimo 8 caracteres" 
+                               required
+                               class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500">
+                        <p x-show="resetPasswordError" x-text="resetPasswordError" class="text-xs text-red-400 mt-1.5 font-medium"></p>
+                    </div>
+
+                    <div class="pt-4 flex justify-end space-x-3 border-t border-slate-800">
+                        <button type="button" @click="resetModalOpen = false" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 transition">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="px-5 py-2 rounded-xl text-xs font-semibold text-white bg-[#0284C7] hover:bg-sky-500 transition shadow-lg shadow-sky-500/20">
+                            Restablecer Clave
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

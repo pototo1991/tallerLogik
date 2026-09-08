@@ -1,0 +1,62 @@
+<div x-data="{ open: true }" x-show="open" x-cloak class="fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4 text-center sm:p-0">
+        <!-- Backdrop -->
+        <div @click="open = false; $el.closest('.fixed').remove()" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity"></div>
+
+        <!-- Dialog -->
+        <div class="inline-block align-bottom bg-[#0F172A] rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-slate-800 p-6 z-10 relative">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-4 mb-4">
+                <div>
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span>📦</span> Ajustar Stock de Bodega
+                    </h3>
+                    <p class="text-xs text-sky-400 font-medium mt-0.5">{{ material.nombre }} ({{ material.unidad_medida }})</p>
+                </div>
+                <button type="button" @click="open = false; $el.closest('.fixed').remove()" class="text-slate-400 hover:text-white text-xl font-bold">&times;</button>
+            </div>
+
+            <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800 mb-4 flex justify-between items-center text-xs">
+                <span class="text-slate-400">Stock Actual en Bodega:</span>
+                <span class="font-mono font-bold text-emerald-400 text-sm">{{ material.stock_actual|floatformat:"0" }} {{ material.unidad_medida }}</span>
+            </div>
+
+
+            <form method="POST" action="{% url 'configuracion_base:material_ajustar_stock' material.id %}" class="space-y-4">
+                {% csrf_token %}
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                        Tipo de Operación *
+                    </label>
+                    {{ form.tipo_operacion }}
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                        Cantidad ({{ material.unidad_medida }}) *
+                    </label>
+                    {{ form.cantidad }}
+                    {% if form.cantidad.errors %}
+                    <p class="text-xs text-red-400 mt-1 font-medium">{{ form.cantidad.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                        Observaciones / Motivo (Opcional)
+                    </label>
+                    {{ form.observaciones }}
+                </div>
+
+                <div class="pt-4 flex justify-end space-x-3 border-t border-slate-800">
+                    <button type="button" @click="open = false; $el.closest('.fixed').remove()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 transition">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-5 py-2 rounded-xl text-xs font-semibold text-white bg-[#0284C7] hover:bg-sky-500 transition shadow-lg shadow-sky-500/20">
+                        Guardar Ajuste
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}Buscador de Materiales Imperial - TallerLogik{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header Card -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl">
+        <div>
+            <h1 class="text-2xl font-bold text-white tracking-tight flex items-center gap-3 flex-wrap">
+                <span>🔍 Catálogo Central (Imperial)</span>
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-sky-950/80 text-sky-400 border border-sky-800/80 shadow-sm">
+                    <span class="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
+                    <span>{{ total_imperial }} productos extraídos</span>
+                </span>
+            </h1>
+            <p class="text-xs text-slate-400 mt-1">Busca e importa insumos y maderas directamente al inventario de tu taller.</p>
+        </div>
+        <a href="{% url 'configuracion_base:materiales_list' %}" class="inline-flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 transition border border-slate-700 shadow-lg">
+            ← Volver a mis Materiales
+        </a>
+    </div>
+
+    <!-- Buscador y Filtro -->
+    <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl">
+        <form method="GET" action="{% url 'configuracion_base:materiales_global_buscar' %}" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="md:col-span-2">
+                <label for="search-input" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Buscar por Nombre o SKU</label>
+                <div class="relative">
+                    <input type="text" id="search-input" name="q" value="{{ query }}" placeholder="Ej. MDF, Terciado, Bisagra, Tornillo..." 
+                           class="w-full pl-4 pr-10 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-[#0284C7] focus:ring-1 focus:ring-[#0284C7] transition placeholder-slate-500">
+                    {% if query %}
+                    <a href="{% url 'configuracion_base:materiales_global_buscar' %}" class="absolute right-3 top-3 text-slate-400 hover:text-white transition">
+                        ✕
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            <div>
+                <label for="categoria-select" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Filtrar por Categoría</label>
+                <select id="categoria-select" name="categoria" onchange="this.form.submit()" 
+                        class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-[#0284C7] transition">
+                    <option value="">Todas las Categorías</option>
+                    {% for cat_val, cat_lbl in categorias %}
+                    <option value="{{ cat_val }}" {% if categoria_filtro == cat_val %}selected{% endif %}>{{ cat_lbl }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+    </div>
+
+    <!-- Resultados -->
+    <div class="bg-[#0F172A] rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-300">
+                <thead class="bg-slate-900 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                    <tr>
+                        <th class="px-6 py-4">SKU Proveedor</th>
+                        <th class="px-6 py-4">Categoría</th>
+                        <th class="px-6 py-4">Nombre del Material</th>
+                        <th class="px-6 py-4">Unidad Medida</th>
+                        <th class="px-6 py-4">Precio Lista Neto</th>
+                        <th class="px-6 py-4 text-center">Importar al Inventario</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800">
+                    {% for material in materiales %}
+                    <tr class="hover:bg-slate-900/50 transition">
+                        <td class="px-6 py-4 font-mono text-xs font-semibold text-slate-400">
+                            {{ material.sku_proveedor }}
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold
+                                {% if material.categoria == 'Tableros' %} bg-amber-950 text-amber-300 border border-amber-800
+                                {% elif material.categoria == 'Maderas' %} bg-emerald-950 text-emerald-300 border border-emerald-800
+                                {% elif material.categoria == 'Quincalleria' %} bg-sky-950 text-sky-300 border border-sky-800
+                                {% else %} bg-slate-800 text-slate-300 border border-slate-700 {% endif %}">
+                                {{ material.get_categoria_display }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 font-semibold text-white">
+                            {{ material.nombre }}
+                        </td>
+                        <td class="px-6 py-4 text-xs font-mono text-slate-300">
+                            {{ material.unidad_medida }}
+                        </td>
+                        <td class="px-6 py-4 font-mono font-bold text-sky-400">
+                            {{ material.costo_unitario|clp }}
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            {% if material.ya_importado %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-800 shadow-sm">
+                                <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                Importado
+                            </span>
+                            {% else %}
+                            <button hx-post="{% url 'configuracion_base:material_importar' material.id %}"
+                                    hx-swap="outerHTML"
+                                    hx-target="this"
+                                    class="inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold text-white bg-[#0284C7] hover:bg-sky-500 transition shadow shadow-sky-500/10 cursor-pointer">
+                                + Importar a Taller
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center text-slate-500">
+                            No se encontraron materiales en el catálogo central que coincidan con tu búsqueda.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}Factura {{ factura.numero_factura }} - TallerLogik{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center space-x-3">
+                <h1 class="text-2xl font-bold text-white tracking-tight">Factura {{ factura.numero_factura }}</h1>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-300 border border-emerald-800">
+                    Cuadrada & Registrada
+                </span>
+            </div>
+            <p class="text-sm text-slate-300 font-semibold mt-1">
+                Proveedor: <strong class="text-white">{{ factura.proveedor }}</strong>
+                {% if factura.id_proveedor and factura.id_proveedor.rut_o_identificacion %}
+                <span class="text-xs font-mono text-slate-400">({{ factura.id_proveedor.rut_o_identificacion }})</span>
+                {% endif %}
+            </p>
+            <div class="flex items-center gap-2 mt-1">
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-950 text-sky-300 border border-sky-800">
+                    Forma de Pago: {{ factura.get_forma_pago_display }}
+                </span>
+                {% if factura.banco_origen %}
+                <span class="text-xs text-slate-400 font-mono">
+                    Banco: {{ factura.banco_origen }}
+                </span>
+                {% endif %}
+            </div>
+            <p class="text-xs text-slate-400 mt-1">Emisión: {{ factura.fecha_emision|date:"d/m/Y" }} | Registrado por: {{ factura.id_usuario_registro.nombre_completo }}</p>
+        </div>
+
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 text-right">
+            <div class="text-xs text-slate-400">Monto Total Neto</div>
+            <div class="text-2xl font-extrabold font-mono text-emerald-400">{{ factura.monto_total_neto|clp }}</div>
+        </div>
+    </div>
+
+    <!-- Desglose por Proyecto -->
+    <div class="bg-[#0F172A] rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-800">
+            <h3 class="text-base font-bold text-white">Distribución de Gastos a Órdenes de Trabajo</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-300">
+                <thead class="bg-slate-900 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                    <tr>
+                        <th class="px-6 py-4">Orden de Trabajo (OT)</th>
+                        <th class="px-6 py-4">Cliente</th>
+                        <th class="px-6 py-4">Tipo de Gasto</th>
+                        <th class="px-6 py-4">Monto Neto Asignado ($)</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800">
+                    {% for g in gastos %}
+                    <tr class="hover:bg-slate-900/50 transition">
+                        <td class="px-6 py-4 font-mono font-bold text-sky-400">
+                            {{ g.id_proyecto.codigo_ot }} - {{ g.id_proyecto.nombre_proyecto }}
+                        </td>
+                        <td class="px-6 py-4 text-xs text-slate-300">
+                            {{ g.id_proyecto.id_cliente.razon_social }}
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-0.5 rounded text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700">
+                                {{ g.get_tipo_gasto_display }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 font-mono font-bold text-emerald-400">
+                            {{ g.monto_neto_asignado|clp }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

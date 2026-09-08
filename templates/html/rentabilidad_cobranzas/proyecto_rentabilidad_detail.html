@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}Informe Financiero {{ metricas.proyecto.codigo_ot }} - TallerLogik{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header Proyecto -->
+    <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center space-x-3">
+                <h1 class="text-2xl font-bold text-white tracking-tight">{{ metricas.proyecto.codigo_ot }}</h1>
+                {% if metricas.sobrecosto_detectado %}
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#DC2626] text-white shadow shadow-red-600/30">
+                    ⚠ Sobrecosto (+{{ metricas.desviacion_pct|pct_entero }}%)
+                </span>
+                {% else %}
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-300 border border-emerald-800">
+                    ✓ Dentro de Presupuesto
+                </span>
+                {% endif %}
+            </div>
+            <p class="text-base text-slate-200 font-semibold mt-1">{{ metricas.proyecto.nombre_proyecto }}</p>
+            <p class="text-xs text-slate-400">Cliente: <strong class="text-white">{{ metricas.proyecto.id_cliente.razon_social }}</strong></p>
+        </div>
+
+        <div class="flex items-center space-x-2">
+            <a href="{% url 'rentabilidad_cobranzas:pago_create_proyecto' metricas.proyecto.pk %}" class="px-4 py-2.5 rounded-xl text-xs font-semibold text-white bg-[#0284C7] hover:bg-sky-500 transition shadow-lg shadow-sky-500/20">
+                + Registrar Pago Cliente
+            </a>
+        </div>
+    </div>
+
+    <!-- Comparativa Financiera Presupuestado vs. Real -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        <!-- Tarjeta Presupuesto Comercial -->
+        <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl space-y-3">
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800 pb-2">Presupuesto Comercial</h3>
+            <div class="space-y-2">
+                <div class="flex justify-between text-sm">
+                    <span class="text-slate-400">Precio Venta Neto:</span>
+                    <span class="font-mono font-bold text-white">{{ metricas.precio_cotizado|clp }}</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="text-slate-400">Costo Presupuestado:</span>
+                    <span class="font-mono font-bold text-amber-400">{{ metricas.costo_presupuestado|clp }}</span>
+                </div>
+                <div class="flex justify-between text-sm pt-2 border-t border-slate-800">
+                    <span class="text-slate-400">Margen Objetivo:</span>
+                    <span class="font-mono font-bold text-sky-400">{{ metricas.margen_objetivo_pct|pct_entero }}%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta Ejecución Real -->
+        <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl space-y-3">
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800 pb-2">Ejecución Real Incurrida</h3>
+            <div class="space-y-2">
+                <div class="flex justify-between text-sm">
+                    <span class="text-slate-400">Facturas Materiales:</span>
+                    <span class="font-mono text-slate-200">{{ metricas.gastos_materiales_reales|clp }}</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="text-slate-400">Mano Obra (MOD):</span>
+                    <span class="font-mono text-slate-200">{{ metricas.costo_mod_real|clp }}</span>
+                </div>
+                <div class="flex justify-between text-sm font-bold pt-2 border-t border-slate-800">
+                    <span class="text-white">Costo Real Total:</span>
+                    <span class="font-mono text-amber-400">{{ metricas.costo_real_total|clp }}</span>
+                </div>
+                <div class="flex justify-between text-xs pt-1">
+                    <span class="text-slate-400">Margen Real Obtenido:</span>
+                    <span class="font-mono font-bold {% if metricas.margen_real_pct < metricas.margen_objetivo_pct %} text-amber-400 {% else %} text-emerald-400 {% endif %}">
+                        {{ metricas.margen_real_pct|pct_entero }}% ({{ metricas.margen_real_monto|clp }})
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta Estado de Cobranza -->
+        <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl space-y-3">
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800 pb-2">Gestión de Cobranzas</h3>
+            <div class="space-y-2">
+                <div class="flex justify-between text-sm">
+                    <span class="text-slate-400">Total Cobrado ({{ metricas.pct_cobrado|pct_entero }}%):</span>
+                    <span class="font-mono font-bold text-emerald-400">{{ metricas.total_pagado_cliente|clp }}</span>
+                </div>
+                <div class="flex justify-between text-sm pt-2 border-t border-slate-800">
+                    <span class="text-slate-400">Saldo Pendiente:</span>
+                    <span class="font-mono font-bold text-sky-400">{{ metricas.saldo_pendiente_cobro|clp }}</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Pestañas / Tablas de Gastos, Tiempos y Pagos -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Compras Asignadas -->
+        <div class="bg-[#0F172A] rounded-2xl border border-slate-800 p-5 space-y-3">
+            <h4 class="text-sm font-bold text-white border-b border-slate-800 pb-2">Facturas de Compra ({{ gastos|length }})</h4>
+            <div class="space-y-2 max-h-60 overflow-y-auto">
+                {% for g in gastos %}
+                <div class="p-3 bg-slate-900 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
+                    <div>
+                        <div class="font-semibold text-white">{{ g.id_factura_compra.proveedor }}</div>
+                        <div class="text-slate-400">Factura N° {{ g.id_factura_compra.numero_factura }}</div>
+                    </div>
+                    <div class="font-mono font-bold text-emerald-400">{{ g.monto_neto_asignado|clp }}</div>
+                </div>
+                {% empty %}
+                <div class="text-xs text-slate-500 text-center py-4">Sin facturas asignadas</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Horas MOD Imputadas -->
+        <div class="bg-[#0F172A] rounded-2xl border border-slate-800 p-5 space-y-3">
+            <h4 class="text-sm font-bold text-white border-b border-slate-800 pb-2">Tiempos MOD ({{ tiempos|length }})</h4>
+            <div class="space-y-2 max-h-60 overflow-y-auto">
+                {% for t in tiempos %}
+                <div class="p-3 bg-slate-900 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
+                    <div>
+                        <div class="font-semibold text-white">{{ t.id_usuario.nombre_completo }}</div>
+                        <div class="text-slate-400">{{ t.get_etapa_display }} - {{ t.horas_trabajadas }} hrs</div>
+                    </div>
+                    <div class="font-mono font-bold text-amber-400">{{ t.costo_mano_obra_calculado|clp }}</div>
+                </div>
+                {% empty %}
+                <div class="text-xs text-slate-500 text-center py-4">Sin horas imputadas</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Pagos Recibidos -->
+        <div class="bg-[#0F172A] rounded-2xl border border-slate-800 p-5 space-y-3">
+            <h4 class="text-sm font-bold text-white border-b border-slate-800 pb-2">Abonos Recibidos ({{ pagos|length }})</h4>
+            <div class="space-y-2 max-h-60 overflow-y-auto">
+                {% for p in pagos %}
+                <div class="p-3 bg-slate-900 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
+                    <div>
+                        <div class="font-semibold text-white">{{ p.get_concepto_hito_display }}</div>
+                        <div class="text-slate-400">{{ p.fecha_pago|date:"d/m/Y" }} - {{ p.get_medio_pago_display }}</div>
+                    </div>
+                    <div class="font-mono font-bold text-sky-400">{{ p.monto_pago|clp }}</div>
+                </div>
+                {% empty %}
+                <div class="text-xs text-slate-500 text-center py-4">Sin abonos registrados</div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ titulo }} - TallerLogik{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+    <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-white tracking-tight">{{ titulo }}</h1>
+        <a href="{% url 'configuracion_base:clientes_list' %}" class="text-xs font-semibold text-slate-400 hover:text-white transition">
+            &larr; Volver a Clientes
+        </a>
+    </div>
+
+    <div class="bg-[#0F172A] p-6 sm:p-8 rounded-2xl border border-slate-800 shadow-xl">
+        <form method="POST" class="space-y-4">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                        Razón Social / Nombre Completo *
+                    </label>
+                    {{ form.razon_social }}
+                    {% if form.razon_social.errors %}<p class="text-xs text-red-400 mt-1">{{ form.razon_social.errors.0 }}</p>{% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                        RUT / Identificación Fiscal (12345678-9)
+                    </label>
+                    {{ form.rut_o_identificacion }}
+                    {% if form.rut_o_identificacion.errors %}<p class="text-xs text-red-400 mt-1 font-medium">{{ form.rut_o_identificacion.errors.0 }}</p>{% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                        Persona de Contacto *
+                    </label>
+                    {{ form.nombre_contacto }}
+                    {% if form.nombre_contacto.errors %}<p class="text-xs text-red-400 mt-1 font-medium">{{ form.nombre_contacto.errors.0 }}</p>{% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                        Correo Contacto
+                    </label>
+                    {{ form.correo_contacto }}
+                    {% if form.correo_contacto.errors %}<p class="text-xs text-red-400 mt-1 font-medium">{{ form.correo_contacto.errors.0 }}</p>{% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                        Teléfono Contacto
+                    </label>
+                    {{ form.telefono_contacto }}
+                    {% if form.telefono_contacto.errors %}<p class="text-xs text-red-400 mt-1 font-medium">{{ form.telefono_contacto.errors.0 }}</p>{% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                        Correo Facturación / General
+                    </label>
+                    {{ form.correo_general }}
+                    {% if form.correo_general.errors %}<p class="text-xs text-red-400 mt-1 font-medium">{{ form.correo_general.errors.0 }}</p>{% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                        Teléfono General
+                    </label>
+                    {{ form.telefono_general }}
+                    {% if form.telefono_general.errors %}<p class="text-xs text-red-400 mt-1 font-medium">{{ form.telefono_general.errors.0 }}</p>{% endif %}
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                        Dirección
+                    </label>
+                    {{ form.direccion }}
+                    {% if form.direccion.errors %}<p class="text-xs text-red-400 mt-1 font-medium">{{ form.direccion.errors.0 }}</p>{% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                        Comuna
+                    </label>
+                    {{ form.comuna }}
+                    {% if form.comuna.errors %}<p class="text-xs text-red-400 mt-1 font-medium">{{ form.comuna.errors.0 }}</p>{% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                        Ciudad
+                    </label>
+                    {{ form.ciudad }}
+                    {% if form.ciudad.errors %}<p class="text-xs text-red-400 mt-1 font-medium">{{ form.ciudad.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+
+            <div class="pt-6 flex justify-end space-x-3">
+                <a href="{% url 'configuracion_base:clientes_list' %}" class="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 transition">
+                    Cancelar
+                </a>
+                <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-semibold text-white bg-[#0284C7] hover:bg-sky-500 transition shadow-lg shadow-sky-500/20">
+                    Guardar Cliente
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

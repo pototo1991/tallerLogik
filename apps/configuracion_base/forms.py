@@ -1,4 +1,5 @@
 import re
+import unicodedata
 from decimal import Decimal
 from django import forms
 from django.core.validators import validate_email
@@ -9,6 +10,21 @@ from apps.core_auth.forms import validar_rut_chileno_modulo11
 
 
 class ProveedorForm(forms.ModelForm):
+    correo_contacto = forms.EmailField(
+        label="Correo Electrónico",
+        required=False,
+        error_messages={
+            'invalid': 'Por favor ingrese un correo electrónico válido con formato usuario@dominio.com.'
+        },
+        widget=forms.EmailInput(attrs={
+            'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500',
+            'placeholder': 'ventas@proveedor.com',
+            'x-model': 'correo',
+            '@input': 'validarCorreo()',
+            ':class': "{ 'border-emerald-500 focus:border-emerald-500': correoValido === true, 'border-red-500 focus:border-red-500': correoValido === false }"
+        })
+    )
+
     class Meta:
         model = Proveedor
         fields = [
@@ -18,13 +34,18 @@ class ProveedorForm(forms.ModelForm):
         ]
         widgets = {
             'razon_social': forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'placeholder': 'Ej. Imperial S.A. / Sodimac / Ferretería Central'}),
-            'rut_o_identificacion': forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 font-mono', 'placeholder': 'Ej. 76123456-7'}),
+            'rut_o_identificacion': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 font-mono',
+                'placeholder': 'Ej. 76123456-7',
+                'x-model': 'rut',
+                '@input': 'formatRut()',
+                ':class': "{ 'border-emerald-500 focus:border-emerald-500': rutValido === true, 'border-red-500 focus:border-red-500': rutValido === false }"
+            }),
             'direccion': forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'placeholder': 'Av. Principal #1234'}),
             'comuna': forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'placeholder': 'Comuna'}),
             'ciudad': forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'placeholder': 'Ciudad'}),
             'nombre_contacto': forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'placeholder': 'Nombre del Vendedor / Ejecutivo'}),
             'telefono_contacto': forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'placeholder': '+56 9 ...'}),
-            'correo_contacto': forms.EmailInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'placeholder': 'ventas@proveedor.com'}),
             'banco_nombre': forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'placeholder': 'Ej. Banco de Chile, BCI, Estado'}),
             'tipo_cuenta': forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'placeholder': 'Cuenta Corriente / Vista / Chequera'}),
             'numero_cuenta': forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 font-mono', 'placeholder': 'N° de cuenta bancaria'}),
@@ -48,14 +69,45 @@ class ProveedorForm(forms.ModelForm):
         if not correo or not str(correo).strip():
             return None
         correo_clean = str(correo).strip().lower()
+        if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', correo_clean):
+            raise forms.ValidationError("Por favor ingrese un correo electrónico válido con formato usuario@dominio.com.")
         try:
             validate_email(correo_clean)
         except forms.ValidationError:
-            raise forms.ValidationError("Por favor ingrese un correo electrónico válido.")
+            raise forms.ValidationError("Por favor ingrese un correo electrónico válido con formato usuario@dominio.com.")
         return correo_clean
 
 
 class ClienteForm(forms.ModelForm):
+    correo_contacto = forms.EmailField(
+        label="Correo Contacto",
+        required=False,
+        error_messages={
+            'invalid': 'Por favor ingrese un correo electrónico válido con formato usuario@dominio.com.'
+        },
+        widget=forms.EmailInput(attrs={
+            'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500',
+            'placeholder': 'contacto@cliente.com',
+            'x-model': 'correoContacto',
+            '@input': 'validarCorreoContacto()',
+            ':class': "{ 'border-emerald-500 focus:border-emerald-500': correoContactoValido === true, 'border-red-500 focus:border-red-500': correoContactoValido === false }"
+        })
+    )
+    correo_general = forms.EmailField(
+        label="Correo Facturación / General",
+        required=False,
+        error_messages={
+            'invalid': 'Por favor ingrese un correo electrónico válido con formato usuario@dominio.com.'
+        },
+        widget=forms.EmailInput(attrs={
+            'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500',
+            'placeholder': 'facturacion@cliente.com',
+            'x-model': 'correoGeneral',
+            '@input': 'validarCorreoGeneral()',
+            ':class': "{ 'border-emerald-500 focus:border-emerald-500': correoGeneralValido === true, 'border-red-500 focus:border-red-500': correoGeneralValido === false }"
+        })
+    )
+
     class Meta:
         model = Cliente
         fields = [
@@ -65,11 +117,15 @@ class ClienteForm(forms.ModelForm):
         ]
         widgets = {
             'razon_social': forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'placeholder': 'Razón Social o Nombre'}),
-            'rut_o_identificacion': forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 font-mono', 'placeholder': 'Ej. 12345678-9'}),
+            'rut_o_identificacion': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 font-mono',
+                'placeholder': 'Ej. 12345678-9',
+                'x-model': 'rut',
+                '@input': 'formatRut()',
+                ':class': "{ 'border-emerald-500 focus:border-emerald-500': rutValido === true, 'border-red-500 focus:border-red-500': rutValido === false }"
+            }),
             'nombre_contacto': forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'placeholder': 'Nombre Persona Contacto'}),
-            'correo_contacto': forms.EmailInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'placeholder': 'contacto@cliente.com'}),
             'telefono_contacto': forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'placeholder': '+56 9 ...'}),
-            'correo_general': forms.EmailInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'placeholder': 'facturacion@cliente.com'}),
             'telefono_general': forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'placeholder': 'Teléfono Empresa'}),
             'direccion': forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'placeholder': 'Calle, Número, Depto/Local'}),
             'comuna': forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'placeholder': 'Comuna'}),
@@ -101,11 +157,15 @@ class ClienteForm(forms.ModelForm):
         if not correo or not str(correo).strip():
             return None
         correo_clean = str(correo).strip().lower()
+        if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', correo_clean):
+            raise forms.ValidationError(
+                "Por favor ingrese un correo electrónico válido con formato usuario@dominio.com."
+            )
         try:
             validate_email(correo_clean)
         except forms.ValidationError:
             raise forms.ValidationError(
-                "Por favor ingrese un correo electrónico válido (ejemplo: contacto@empresa.com)."
+                "Por favor ingrese un correo electrónico válido con formato usuario@dominio.com."
             )
         return correo_clean
 
@@ -114,11 +174,15 @@ class ClienteForm(forms.ModelForm):
         if not correo or not str(correo).strip():
             return None
         correo_clean = str(correo).strip().lower()
+        if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', correo_clean):
+            raise forms.ValidationError(
+                "Por favor ingrese un correo electrónico válido con formato usuario@dominio.com."
+            )
         try:
             validate_email(correo_clean)
         except forms.ValidationError:
             raise forms.ValidationError(
-                "Por favor ingrese un correo electrónico válido (ejemplo: facturacion@empresa.com)."
+                "Por favor ingrese un correo electrónico válido con formato usuario@dominio.com."
             )
         return correo_clean
 
@@ -148,6 +212,31 @@ class MaterialForm(forms.ModelForm):
             'proveedor': forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'placeholder': 'Ej. Imperial, Sodimac, Dap Ducasse, Ferretería local...'}),
             'observaciones': forms.Textarea(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'rows': 3, 'placeholder': 'Teléfono: +56 9 ..., Contacto: ..., Dirección: ..., o notas del insumo'}),
         }
+
+    def __init__(self, *args, empresa=None, **kwargs):
+        self.empresa = empresa
+        super().__init__(*args, **kwargs)
+        if empresa:
+            from .models import Proveedor
+            proveedores = list(
+                Proveedor.objects.filter(id_empresa=empresa)
+                .values_list('razon_social', flat=True)
+                .order_by('razon_social')
+            )
+            choices = [('', '-- Seleccionar Proveedor Preferente --')]
+            for p in proveedores:
+                choices.append((p, p))
+
+            if self.instance and self.instance.proveedor and self.instance.proveedor not in proveedores:
+                choices.append((self.instance.proveedor, self.instance.proveedor))
+
+            self.fields['proveedor'] = forms.ChoiceField(
+                choices=choices,
+                required=False,
+                widget=forms.Select(attrs={
+                    'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500'
+                })
+            )
 
 
     def clean_stock_actual(self):
@@ -206,6 +295,16 @@ class OperarioForm(forms.ModelForm):
         min_length=8,
         widget=forms.PasswordInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500'})
     )
+    costo_hora = forms.CharField(
+        label="Tarifa Costo/Hora Operario",
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono focus:outline-none focus:border-sky-500',
+            'placeholder': 'Ej. 6.500',
+            'x-model': 'costoDisplay',
+            '@input': 'formatCosto($event)'
+        })
+    )
 
     class Meta:
         model = Usuario
@@ -213,8 +312,48 @@ class OperarioForm(forms.ModelForm):
         widgets = {
             'nombre_completo': forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500'}),
             'rol': forms.Select(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500'}),
-            'costo_hora': forms.NumberInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'step': '0.01'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'rol' in self.fields:
+            choices = [
+                c for c in self.fields['rol'].choices if c[0] != 'superadmin_saas'
+            ]
+            choices.sort(key=lambda c: c[1])
+            self.fields['rol'].choices = choices
+
+        if self.instance and self.instance.pk and self.instance.costo_hora is not None:
+            val = self.instance.costo_hora
+            if isinstance(val, Decimal):
+                if val % 1 == 0:
+                    self.initial['costo_hora'] = f"{int(val):,}".replace(',', '.')
+                else:
+                    self.initial['costo_hora'] = f"{val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+
+    def clean_costo_hora(self):
+        val = self.cleaned_data.get('costo_hora')
+        if val is None:
+            return Decimal('0.00')
+        if isinstance(val, (int, float, Decimal)):
+            return Decimal(str(val))
+        val_str = str(val).strip().replace('$', '').strip()
+        if not val_str:
+            return Decimal('0.00')
+
+        if '.' in val_str and ',' in val_str:
+            val_str = val_str.replace('.', '').replace(',', '.')
+        elif '.' in val_str and ',' not in val_str:
+            parts = val_str.split('.')
+            if len(parts) > 1 and all(len(p) == 3 for p in parts[1:]):
+                val_str = ''.join(parts)
+        elif ',' in val_str and '.' not in val_str:
+            val_str = val_str.replace(',', '.')
+
+        try:
+            return Decimal(val_str)
+        except Exception:
+            raise forms.ValidationError("Ingrese una tarifa válida (ejemplo: 6500 o 6.500).")
 
     def clean_correo_electronico(self):
         correo = self.cleaned_data.get('correo_electronico')
@@ -222,6 +361,13 @@ class OperarioForm(forms.ModelForm):
             return correo
 
         correo_clean = str(correo).strip().lower()
+        if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', correo_clean):
+            raise forms.ValidationError("Por favor ingrese un correo electrónico válido (ejemplo: operario@taller.com).")
+        try:
+            validate_email(correo_clean)
+        except forms.ValidationError:
+            raise forms.ValidationError("Por favor ingrese un correo electrónico válido (ejemplo: operario@taller.com).")
+
         qs = Usuario.objects.filter(correo_electronico=correo_clean)
         if self.instance and self.instance.pk:
             qs = qs.exclude(pk=self.instance.pk)
@@ -249,6 +395,16 @@ class OperarioEditForm(forms.ModelForm):
             ':class': "{ 'border-emerald-500 focus:border-emerald-500': emailValido === true, 'border-red-500 focus:border-red-500': emailValido === false }"
         })
     )
+    costo_hora = forms.CharField(
+        label="Tarifa Costo/Hora Operario",
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono focus:outline-none focus:border-sky-500',
+            'placeholder': 'Ej. 6.500',
+            'x-model': 'costoDisplay',
+            '@input': 'formatCosto($event)'
+        })
+    )
 
     class Meta:
         model = Usuario
@@ -256,8 +412,48 @@ class OperarioEditForm(forms.ModelForm):
         widgets = {
             'nombre_completo': forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500'}),
             'rol': forms.Select(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500'}),
-            'costo_hora': forms.NumberInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'step': '0.01'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'rol' in self.fields:
+            choices = [
+                c for c in self.fields['rol'].choices if c[0] != 'superadmin_saas'
+            ]
+            choices.sort(key=lambda c: c[1])
+            self.fields['rol'].choices = choices
+
+        if self.instance and self.instance.pk and self.instance.costo_hora is not None:
+            val = self.instance.costo_hora
+            if isinstance(val, Decimal):
+                if val % 1 == 0:
+                    self.initial['costo_hora'] = f"{int(val):,}".replace(',', '.')
+                else:
+                    self.initial['costo_hora'] = f"{val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+
+    def clean_costo_hora(self):
+        val = self.cleaned_data.get('costo_hora')
+        if val is None:
+            return Decimal('0.00')
+        if isinstance(val, (int, float, Decimal)):
+            return Decimal(str(val))
+        val_str = str(val).strip().replace('$', '').strip()
+        if not val_str:
+            return Decimal('0.00')
+
+        if '.' in val_str and ',' in val_str:
+            val_str = val_str.replace('.', '').replace(',', '.')
+        elif '.' in val_str and ',' not in val_str:
+            parts = val_str.split('.')
+            if len(parts) > 1 and all(len(p) == 3 for p in parts[1:]):
+                val_str = ''.join(parts)
+        elif ',' in val_str and '.' not in val_str:
+            val_str = val_str.replace(',', '.')
+
+        try:
+            return Decimal(val_str)
+        except Exception:
+            raise forms.ValidationError("Ingrese una tarifa válida (ejemplo: 6500 o 6.500).")
 
     def clean_correo_electronico(self):
         correo = self.cleaned_data.get('correo_electronico')
@@ -298,6 +494,78 @@ class ReestablecerPasswordForm(forms.Form):
         if not password or not str(password).strip():
             raise forms.ValidationError("La contraseña no puede estar vacía ni contener únicamente espacios.")
         return str(password).strip()
+
+
+class BancoForm(forms.ModelForm):
+    class Meta:
+        from .models import Banco
+        model = Banco
+        fields = ['nombre_banco', 'codigo_sbif', 'numero_cuenta', 'tipo_cuenta', 'activo']
+        widgets = {
+            'nombre_banco': forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'placeholder': 'Ej. Banco de Chile, BCI, Santander, BancoEstado'}),
+            'codigo_sbif': forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 font-mono', 'placeholder': 'Ej. 001, 016, 012'}),
+            'numero_cuenta': forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 font-mono', 'placeholder': 'N° de cuenta bancaria del taller'}),
+            'tipo_cuenta': forms.Select(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500'}),
+            'activo': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-sky-600 bg-slate-800 border-slate-700 rounded focus:ring-sky-500'}),
+        }
+
+    def __init__(self, *args, empresa=None, **kwargs):
+        self.empresa = empresa
+        super().__init__(*args, **kwargs)
+
+    def clean_numero_cuenta(self):
+        numero = self.cleaned_data.get('numero_cuenta')
+        if not numero or not str(numero).strip():
+            return None
+        numero_clean = str(numero).strip()
+
+        from .models import Banco
+        empresa = self.empresa
+        if not empresa and self.instance and hasattr(self.instance, 'id_empresa_id') and self.instance.id_empresa_id:
+            empresa = self.instance.id_empresa
+
+        if empresa:
+            qs = Banco.objects.filter(id_empresa=empresa, numero_cuenta__iexact=numero_clean)
+            if self.instance and self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise forms.ValidationError("Este número de cuenta bancaria ya se encuentra registrado en su empresa/taller.")
+
+        return numero_clean
+
+
+class ServicioTarifaForm(forms.ModelForm):
+    class Meta:
+        from .models import ServicioTarifa
+        model = ServicioTarifa
+        fields = ['nombre_servicio', 'categoria', 'unidad_medida', 'costo_base_unitario', 'observaciones', 'activo']
+        widgets = {
+            'nombre_servicio': forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'placeholder': 'Ej. Flete Despacho Comunas Centrales / Montaje Mobiliario en Obra'}),
+            'categoria': forms.Select(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500'}),
+            'unidad_medida': forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'placeholder': 'Global, Viaje, Día, Hora'}),
+            'costo_base_unitario': forms.NumberInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'step': '0.01'}),
+            'observaciones': forms.Textarea(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'rows': 3, 'placeholder': 'Condiciones del servicio, restricciones o detalles...'}),
+            'activo': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-sky-600 bg-slate-800 border-slate-700 rounded focus:ring-sky-500'}),
+        }
+
+
+class ImportarExcelForm(forms.Form):
+    TIPO_DATOS_CHOICES = (
+        ('clientes', '👥 Clientes'),
+        ('materiales', '📦 Catálogo de Materiales'),
+        ('proveedores', '🏬 Proveedores'),
+    )
+
+    tipo_datos = forms.ChoiceField(
+        choices=TIPO_DATOS_CHOICES,
+        label="Tipo de Datos a Importar",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500'})
+    )
+    archivo_excel = forms.FileField(
+        label="Seleccionar Archivo Excel (.xlsx, .csv)",
+        widget=forms.FileInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-300 focus:outline-none focus:border-sky-500', 'accept': '.xlsx, .xls, .csv'})
+    )
+
 
 
 

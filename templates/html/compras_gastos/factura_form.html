@@ -3,58 +3,102 @@
 {% block title %}Registrar Factura de Compra - TallerLogik{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto space-y-6" x-data="facturaCompraApp()">
+<div class="max-w-4xl mx-auto space-y-6" x-data="facturaCompraApp()" x-init="init()">
 
-    <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl flex items-center justify-between">
+    <div class="flex items-center justify-between bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl">
         <div>
             <h1 class="text-2xl font-bold text-white tracking-tight">Registrar Factura de Compra</h1>
             <p class="text-xs text-slate-400 mt-1">Ingreso de comprobante y distribución de montos netos a proyectos
                 activos</p>
         </div>
         <a href="{% url 'compras_gastos:facturas_list' %}"
-            class="text-xs font-semibold text-slate-400 hover:text-white transition">
+            class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700 transition">
             &larr; Volver a Facturas
         </a>
     </div>
 
-    <form method="POST" class="space-y-6" @submit="validarCuadratura($event)">
+    <form method="POST" class="space-y-6" @submit="validarCuadratura($event)" novalidate>
         {% csrf_token %}
 
+        {% if header_form.errors %}
+        <div class="p-4 bg-red-950/80 border border-red-800 rounded-xl text-red-200 text-xs space-y-1 mb-4">
+            <div class="font-bold">Por favor corrige los siguientes errores:</div>
+            <ul class="list-disc list-inside">
+                {% for field in header_form %}
+                {% for error in field.errors %}
+                <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                {% endfor %}
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
         <!-- Cabecera de Factura -->
-        <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl space-y-4">
-            <h3 class="text-base font-bold text-white border-b border-slate-800 pb-2">1. Datos del Comprobante / Factura
+        <div class="bg-[#0F172A] p-6 sm:p-8 rounded-2xl border border-slate-800 shadow-xl space-y-4">
+            <h3 class="text-sm font-bold text-sky-400 uppercase tracking-wider border-b border-slate-800 pb-2">
+                🧾 1. Datos del Comprobante / Factura
             </h3>
 
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">N° Factura / Boleta *</label>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">N° Factura / Boleta *</label>
                     {{ header_form.numero_factura }}
+                    {% if header_form.numero_factura.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{
+                        header_form.numero_factura.errors.0 }}</p>{% endif %}
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Proveedor Registrado</label>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Proveedor *</label>
                     {{ header_form.id_proveedor }}
+                    {% if header_form.id_proveedor.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{
+                        header_form.id_proveedor.errors.0 }}</p>{% endif %}
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Razón Social (o texto libre)</label>
-                    {{ header_form.proveedor }}
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Fecha Emisión *</label>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Fecha de Compra *</label>
                     {{ header_form.fecha_emision }}
+                    {% if header_form.fecha_emision.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{
+                        header_form.fecha_emision.errors.0 }}</p>{% endif %}
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Forma de Pago *</label>
-                    {{ header_form.forma_pago }}
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Forma de Pago *</label>
+                    <select name="forma_pago" id="id_forma_pago" x-model="formaPago"
+                        class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500">
+                        <option value="EFECTIVO">Efectivo</option>
+                        <option value="TRANSFERENCIA" selected>Transferencia Bancaria</option>
+                        <option value="TARJETA_DEBITO">Tarjeta de Débito</option>
+                        <option value="TARJETA_CREDITO">Tarjeta de Crédito</option>
+                        <option value="CHEQUE">Cheque</option>
+                        <option value="CREDITO_PROVEEDOR">Crédito Proveedor / Cta. Corriente</option>
+                        <option value="OTRO">Otro / Varios</option>
+                    </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Banco / Institución</label>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Banco Registrado</label>
+                    {{ header_form.id_banco }}
+                    <p class="text-[11px] text-slate-400 mt-1">Selecciona un banco del mantenedor (opcional)</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Banco (Texto Libre)</label>
                     {{ header_form.banco_origen }}
+                    <p class="text-[11px] text-slate-400 mt-1">Solo si el banco no está en el mantenedor</p>
+                </div>
+                <div x-show="formaPago === 'CHEQUE'" x-cloak class="sm:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-4 bg-amber-950/20 p-4 rounded-xl border border-amber-800/40">
+                    <div>
+                        <label class="block text-xs font-semibold text-amber-400 mb-1">🎟️ N° de Cheque *</label>
+                        {{ header_form.numero_cheque }}
+                        {% if header_form.numero_cheque.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ header_form.numero_cheque.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-amber-400 mb-1">📅 Fecha Vencimiento Cheque</label>
+                        {{ header_form.fecha_vencimiento_cheque }}
+                        <p class="text-[11px] text-amber-500/70 mt-1">Requerido para cheques a plazo (opcional para al día)</p>
+                    </div>
                 </div>
                 <div class="sm:col-span-3">
-                    <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Monto Total Neto ($) *</label>
-                    <input type="number" step="1" name="monto_total_neto" x-model.number="montoTotalNeto"
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Monto Total Neto ($) *</label>
+                    <input type="hidden" name="monto_total_neto" :value="montoTotalNeto">
+                    <input type="text" x-model="montoTotalNetoDisplay" @input="formatMontoTotalNeto($event)"
                         class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono font-bold focus:outline-none focus:border-sky-500"
-                        placeholder="150000" required>
+                        placeholder="$150.000" required>
                     <p x-show="montoTotalNeto > 0"
                         class="text-xs text-sky-400 font-mono font-bold mt-1.5 flex items-center gap-1">
                         <span>💵 Monto:</span>
@@ -62,7 +106,7 @@
                     </p>
                 </div>
                 <div class="sm:col-span-3">
-                    <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Observaciones</label>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Observaciones</label>
                     {{ header_form.observaciones }}
                 </div>
             </div>
@@ -89,15 +133,17 @@
         </div>
 
         <!-- Desglose por Proyectos Activos -->
-        <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl space-y-4">
+        <div class="bg-[#0F172A] p-6 sm:p-8 rounded-2xl border border-slate-800 shadow-xl space-y-4">
             <div class="flex items-center justify-between border-b border-slate-800 pb-2">
                 <div>
-                    <h3 class="text-base font-bold text-white">2. Distribución de Montos Netos por Proyecto</h3>
-                    <p class="text-xs text-slate-400">Asigna qué parte del total neto corresponde a cada Orden de
+                    <h3 class="text-sm font-bold text-sky-400 uppercase tracking-wider">
+                        📦 2. Distribución de Montos Netos por Proyecto
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Asigna qué parte del total neto corresponde a cada Orden de
                         Trabajo y a sus materiales / insumos</p>
                 </div>
                 <button type="button" @click="agregarProyecto()"
-                    class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-950 text-sky-300 border border-sky-800 hover:bg-sky-900 transition">
+                    class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-sky-950 text-sky-300 border border-sky-800 hover:bg-sky-900 transition">
                     + Añadir Proyecto
                 </button>
             </div>
@@ -106,18 +152,17 @@
                 <template x-for="(pSelect, pIndex) in proyectosSeleccionados" :key="pIndex">
                     <div class="p-4 bg-slate-900 rounded-2xl border border-slate-800 space-y-4 relative">
                         <!-- Fila de Selección del Proyecto -->
-                        <div
-                            class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
                             <div class="flex-1 max-w-xl">
-                                <label class="block text-[11px] font-semibold text-slate-400 mb-1">Proyecto / OT
-                                    *</label>
+                                <label class="block text-xs font-semibold text-slate-300 mb-1">
+                                    Proyecto / OT *
+                                </label>
                                 <select x-model="pSelect.proyecto_id" @change="cargarItemsProyecto(pIndex)"
                                     class="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none"
                                     required>
                                     <option value="">-- Seleccionar OT --</option>
                                     {% for p in proyectos %}
-                                    <option value="{{ p.id }}">{{ p.codigo_ot }} - {{ p.nombre_proyecto }} ({{
-                                        p.id_cliente.razon_social }})</option>
+                                    <option value="{{ p.id }}">{{ p.codigo_ot }} - {{ p.nombre_proyecto }} ({{ p.id_cliente.razon_social }})</option>
                                     {% endfor %}
                                 </select>
                             </div>
@@ -133,15 +178,23 @@
                         <!-- Lista Pequeña de Ítems del Proyecto -->
                         <div x-show="pSelect.proyecto_id" class="space-y-3">
                             <div class="flex items-center justify-between">
-                                <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Ítems de
-                                    Producción & Gastos Asignados</h4>
+                                <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Ítems de Producción & Gastos Asignados</h4>
                                 <button type="button" @click="agregarItemExtra(pIndex)"
                                     class="px-2.5 py-1 rounded-md text-[10px] font-semibold bg-sky-950 text-sky-300 border border-sky-800 hover:bg-sky-900 transition">
-                                    + Añadir Ítem Extra
+                                    + Añadir Ítem
                                 </button>
                             </div>
 
-                            <div class="overflow-x-auto">
+                            <!-- Indicador de carga mientras se consulta la API -->
+                            <div x-show="pSelect.cargando" class="flex items-center gap-2 py-3 text-xs text-sky-400">
+                                <svg class="animate-spin h-4 w-4 text-sky-400" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                </svg>
+                                Cargando materiales de la OT...
+                            </div>
+
+                            <div x-show="!pSelect.cargando" class="overflow-x-auto">
                                 <table class="w-full text-left text-xs border-collapse">
                                     <thead>
                                         <tr class="border-b border-slate-800 text-slate-400 font-semibold">
@@ -154,58 +207,51 @@
                                     <tbody class="divide-y divide-slate-800/50">
                                         <template x-for="(item, itemIndex) in pSelect.items" :key="itemIndex">
                                             <tr class="align-middle">
-                                                <!-- Inputs Ocultos del Formulario Django para mantener listas paralelas -->
-                                                <input type="hidden" name="desglose_proyecto_id"
-                                                    :value="pSelect.proyecto_id">
+                                                <!-- Inputs ocultos para el formulario Django -->
+                                                <input type="hidden" name="desglose_proyecto_id" :value="pSelect.proyecto_id">
                                                 <input type="hidden" name="desglose_item_id" :value="item.id">
 
                                                 <td class="py-2 pr-2">
-                                                    <template x-if="!item.es_nuevo">
-                                                        <div class="py-1.5">
-                                                            <span class="text-slate-200 font-semibold"
-                                                                x-text="item.descripcion"></span>
-                                                            <input type="hidden" name="desglose_descripcion"
-                                                                :value="item.descripcion">
-                                                        </div>
-                                                    </template>
-                                                    <template x-if="item.es_nuevo">
-                                                        <input type="text" name="desglose_descripcion"
-                                                            x-model="item.descripcion"
-                                                            placeholder="Ej: Planchas MDF extra, Herrajes"
-                                                            class="w-full px-2.5 py-1 bg-slate-800 border border-slate-700 rounded text-xs text-white focus:outline-none"
-                                                            required>
-                                                    </template>
+                                                    <!-- Selector desplegable de Materiales e Insumos de la OT -->
+                                                    <div class="space-y-1">
+                                                        <select x-effect="updateSelectOptions($el, pSelect.available_items, item.selected_id)"
+                                                            x-model="item.selected_id"
+                                                            @change="onItemSelectChange(pIndex, itemIndex)"
+                                                            class="w-full px-2.5 py-1 bg-slate-800 border border-slate-700 rounded text-xs text-white focus:outline-none focus:border-sky-500">
+                                                        </select>
+
+                                                        <!-- Campo de texto si seleccionó ítem extra nuevo -->
+                                                        <template x-if="item.es_nuevo">
+                                                            <input type="text" name="desglose_descripcion"
+                                                                x-model="item.descripcion"
+                                                                placeholder="Ej: Planchas MDF extra, Herrajes, Flete"
+                                                                class="w-full px-2.5 py-1 bg-slate-800 border border-slate-700 rounded text-xs text-white focus:outline-none focus:border-sky-500 mt-1"
+                                                                required>
+                                                        </template>
+                                                        <template x-if="!item.es_nuevo">
+                                                            <input type="hidden" name="desglose_descripcion" :value="item.descripcion">
+                                                        </template>
+                                                    </div>
                                                 </td>
 
                                                 <td class="py-2 px-2">
-                                                    <template x-if="!item.es_nuevo">
-                                                        <div class="py-1.5">
-                                                            <span
-                                                                class="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-300"
-                                                                x-text="item.tipo_gasto"></span>
-                                                            <input type="hidden" name="desglose_tipo_gasto"
-                                                                :value="item.tipo_gasto">
-                                                        </div>
-                                                    </template>
-                                                    <template x-if="item.es_nuevo">
-                                                        <select name="desglose_tipo_gasto" x-model="item.tipo_gasto"
-                                                            class="w-full px-2.5 py-1 bg-slate-800 border border-slate-700 rounded text-xs text-white focus:outline-none">
-                                                            <option value="Material">Material</option>
-                                                            <option value="Insumo">Insumo</option>
-                                                            <option value="Servicio_Tercero">Servicio Tercero</option>
-                                                            <option value="Ferreteria_Imprevista">Ferretería Imprevista
-                                                            </option>
-                                                            <option value="Flete">Flete</option>
-                                                            <option value="Subcontrato">Subcontrato</option>
-                                                        </select>
-                                                    </template>
+                                                    <select name="desglose_tipo_gasto" x-model="item.tipo_gasto"
+                                                        class="w-full px-2.5 py-1 bg-slate-800 border border-slate-700 rounded text-xs text-white focus:outline-none focus:border-sky-500">
+                                                        <option value="Material">Material</option>
+                                                        <option value="Insumo">Insumo</option>
+                                                        <option value="Servicio_Tercero">Servicio Tercero</option>
+                                                        <option value="Ferreteria_Imprevista">Ferretería Imprevista</option>
+                                                        <option value="Flete">Flete</option>
+                                                        <option value="Subcontrato">Subcontrato</option>
+                                                    </select>
                                                 </td>
 
                                                 <td class="py-2 pl-2">
-                                                    <input type="number" step="1" name="desglose_monto"
-                                                        x-model.number="item.monto"
-                                                        class="w-full px-2.5 py-1 bg-slate-800 border border-slate-700 rounded text-xs text-white font-mono font-bold focus:outline-none"
-                                                        placeholder="100000" required>
+                                                    <input type="hidden" name="desglose_monto" :value="item.monto">
+                                                    <input type="text" x-model="item.montoDisplay"
+                                                        @input="formatItemMonto($event, item)"
+                                                        class="w-full px-2.5 py-1 bg-slate-800 border border-slate-700 rounded text-xs text-white font-mono font-bold focus:outline-none focus:border-sky-500"
+                                                        placeholder="$100.000" required>
                                                     <div x-show="item.monto > 0"
                                                         class="text-[10px] text-sky-400 font-mono font-semibold mt-0.5"
                                                         x-text="'$' + Math.round(item.monto).toLocaleString('es-CL')">
@@ -224,7 +270,7 @@
                                         <template x-if="pSelect.items.length === 0">
                                             <tr>
                                                 <td colspan="4" class="py-4 text-center text-slate-500 italic">
-                                                    Cargando ítems o esta OT no posee ítems registrados...
+                                                    Selecciona una OT arriba para desplegar sus materiales e insumos...
                                                 </td>
                                             </tr>
                                         </template>
@@ -237,14 +283,15 @@
             </div>
         </div>
 
-        <div class="flex justify-end space-x-3">
+        <!-- Botones -->
+        <div class="flex justify-end space-x-3 pt-4 border-t border-slate-800">
             <a href="{% url 'compras_gastos:facturas_list' %}"
-                class="px-5 py-3 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 transition">
+                class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700 transition">
                 Cancelar
             </a>
             <button type="submit" :disabled="!estaCuadrado"
-                class="px-6 py-3 rounded-xl text-xs font-bold text-white transition shadow-lg"
-                :class="estaCuadrado ? 'bg-[#0284C7] hover:bg-sky-500 shadow-sky-500/20' : 'bg-slate-700 text-slate-500 cursor-not-allowed'">
+                class="px-6 py-2.5 rounded-xl text-xs font-bold transition shadow-lg"
+                :class="estaCuadrado ? 'bg-[#0284C7] hover:bg-sky-500 text-white shadow-sky-500/20' : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'">
                 Guardar Factura & Gastos
             </button>
         </div>
@@ -257,9 +304,43 @@
     function facturaCompraApp() {
         return {
             montoTotalNeto: 0,
+            montoTotalNetoDisplay: '',
+            formaPago: 'TRANSFERENCIA',
             proyectosSeleccionados: [
-                { proyecto_id: '', items: [] }
+                { proyecto_id: '', items: [], cargando: false }
             ],
+            init() {
+                let initVal = '{{ header_form.monto_total_neto.value|default:"" }}';
+                if (initVal) {
+                    let num = Math.round(parseFloat(initVal));
+                    if (!isNaN(num) && num > 0) {
+                        this.montoTotalNeto = num;
+                        this.montoTotalNetoDisplay = '$' + num.toLocaleString('es-CL');
+                    }
+                }
+            },
+            formatMontoTotalNeto(e) {
+                let raw = e.target.value.replace(/[^0-9]/g, '');
+                if (!raw) {
+                    this.montoTotalNeto = 0;
+                    this.montoTotalNetoDisplay = '';
+                    return;
+                }
+                let num = parseInt(raw, 10);
+                this.montoTotalNeto = num;
+                this.montoTotalNetoDisplay = '$' + num.toLocaleString('es-CL');
+            },
+            formatItemMonto(e, item) {
+                let raw = e.target.value.replace(/[^0-9]/g, '');
+                if (!raw) {
+                    item.monto = 0;
+                    item.montoDisplay = '';
+                    return;
+                }
+                let num = parseInt(raw, 10);
+                item.monto = num;
+                item.montoDisplay = '$' + num.toLocaleString('es-CL');
+            },
             get sumaDistribuidos() {
                 let total = 0;
                 this.proyectosSeleccionados.forEach(p => {
@@ -281,7 +362,7 @@
                 return `El desglose sobrepasa el total de la factura por $${diffFmt}.`;
             },
             agregarProyecto() {
-                this.proyectosSeleccionados.push({ proyecto_id: '', items: [] });
+                this.proyectosSeleccionados.push({ proyecto_id: '', items: [], cargando: false });
             },
             eliminarProyecto(index) {
                 if (this.proyectosSeleccionados.length > 1) {
@@ -290,37 +371,118 @@
             },
             cargarItemsProyecto(index) {
                 const proyectoId = this.proyectosSeleccionados[index].proyecto_id;
-                if (!proyectoId) {
-                    this.proyectosSeleccionados[index].items = [];
-                    return;
-                }
 
-                fetch(`/ordenes-trabajo/api/proyectos/${proyectoId}/items/`)
+                // Limpia items al cambiar o deseleccionar proyecto
+                this.proyectosSeleccionados[index].items = [];
+                this.proyectosSeleccionados[index].available_items = [];
+                this.proyectosSeleccionados[index].cargando = false;
+
+                if (!proyectoId) return;
+
+                this.proyectosSeleccionados[index].cargando = true;
+
+                fetch(`/proyectos/api/proyectos/${proyectoId}/items/`)
                     .then(res => {
-                        if (!res.ok) throw new Error("Error consultando la API");
+                        if (!res.ok) throw new Error(`HTTP ${res.status}`);
                         return res.json();
                     })
                     .then(data => {
-                        this.proyectosSeleccionados[index].items = data.items.map(item => ({
-                            id: item.id,
-                            descripcion: item.descripcion,
-                            tipo_gasto: item.tipo_item,
-                            monto: 0,
-                            es_nuevo: false
-                        }));
+                        const apiItems = data.items || [];
+                        this.proyectosSeleccionados[index].available_items = apiItems;
+
+                        if (apiItems.length > 0) {
+                            // Iniciar con 1 fila desplegable vacía para que el usuario elija el material deseado de la OT
+                            this.proyectosSeleccionados[index].items = [{
+                                selected_id: '',
+                                id: '',
+                                descripcion: '',
+                                tipo_gasto: 'Material',
+                                monto: 0,
+                                montoDisplay: '',
+                                es_nuevo: false
+                            }];
+                        } else {
+                            // OT sin materiales registrados: habilitar ingreso manual
+                            this.proyectosSeleccionados[index].items = [{
+                                selected_id: '__NUEVO__',
+                                id: '',
+                                descripcion: '',
+                                tipo_gasto: 'Material',
+                                monto: 0,
+                                montoDisplay: '',
+                                es_nuevo: true
+                            }];
+                        }
+                        this.proyectosSeleccionados[index].cargando = false;
                     })
                     .catch(err => {
-                        console.error("Error al cargar ítems del proyecto:", err);
-                        this.proyectosSeleccionados[index].items = [];
+                        console.error('[TallerLogik] Error al cargar ítems del proyecto:', err);
+                        this.proyectosSeleccionados[index].items = [{
+                            selected_id: '__NUEVO__',
+                            id: '',
+                            descripcion: '',
+                            tipo_gasto: 'Material',
+                            monto: 0,
+                            montoDisplay: '',
+                            es_nuevo: true
+                        }];
+                        this.proyectosSeleccionados[index].cargando = false;
                     });
+            },
+            updateSelectOptions(selectEl, availableItems, selectedVal) {
+                if (!selectEl) return;
+                let html = '<option value="">-- Seleccionar Material / Insumo de la OT --</option>';
+                if (availableItems && availableItems.length > 0) {
+                    availableItems.forEach(mat => {
+                        const isSel = (mat.id === selectedVal) ? 'selected' : '';
+                        const label = mat.descripcion + (mat.tipo_item ? ` (${mat.tipo_item})` : '');
+                        html += `<option value="${mat.id}" ${isSel}>${label}</option>`;
+                    });
+                }
+                const isExtraSel = (selectedVal === '__NUEVO__') ? 'selected' : '';
+                html += `<option value="__NUEVO__" ${isExtraSel}>+ Otro ítem extra fuera de cotización</option>`;
+
+                if (selectEl.innerHTML !== html) {
+                    selectEl.innerHTML = html;
+                    if (selectedVal) {
+                        selectEl.value = selectedVal;
+                    }
+                }
+            },
+            onItemSelectChange(pIndex, itemIndex) {
+                const itemRow = this.proyectosSeleccionados[pIndex].items[itemIndex];
+                const selectedVal = itemRow.selected_id;
+                const availables = this.proyectosSeleccionados[pIndex].available_items || [];
+
+                if (selectedVal === '__NUEVO__') {
+                    itemRow.id = '';
+                    itemRow.descripcion = '';
+                    itemRow.tipo_gasto = 'Material';
+                    itemRow.es_nuevo = true;
+                } else if (selectedVal) {
+                    const found = availables.find(a => a.id === selectedVal);
+                    if (found) {
+                        itemRow.id = found.id;
+                        itemRow.descripcion = found.descripcion;
+                        itemRow.tipo_gasto = found.tipo_item || 'Material';
+                        itemRow.es_nuevo = false;
+                    }
+                } else {
+                    itemRow.id = '';
+                    itemRow.descripcion = '';
+                    itemRow.tipo_gasto = 'Material';
+                    itemRow.es_nuevo = false;
+                }
             },
             agregarItemExtra(proyectoIndex) {
                 this.proyectosSeleccionados[proyectoIndex].items.push({
+                    selected_id: '',
                     id: '',
                     descripcion: '',
                     tipo_gasto: 'Material',
                     monto: 0,
-                    es_nuevo: true
+                    montoDisplay: '',
+                    es_nuevo: false
                 });
             },
             eliminarItem(proyectoIndex, itemIndex) {

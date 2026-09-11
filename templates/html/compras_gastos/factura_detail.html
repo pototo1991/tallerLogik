@@ -23,6 +23,11 @@
                 <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-950 text-sky-300 border border-sky-800">
                     Forma de Pago: {{ factura.get_forma_pago_display }}
                 </span>
+                {% if factura.numero_cheque %}
+                <span class="text-xs text-amber-400 font-mono font-bold">
+                    Cheque N°: {{ factura.numero_cheque }}
+                </span>
+                {% endif %}
                 {% if factura.banco_origen %}
                 <span class="text-xs text-slate-400 font-mono">
                     Banco: {{ factura.banco_origen }}

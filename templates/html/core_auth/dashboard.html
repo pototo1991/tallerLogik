@@ -4,7 +4,7 @@
 {% block title %}Dashboard - TallerLogik{% endblock %}
 
 {% block content %}
-<div class="space-y-6" x-data="{ showUsersModal: false }">
+<div class="space-y-6" x-data="{ showUsersModal: false, showSobrecostoModal: false }">
     <!-- Header Bienvenida -->
     <div
         class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -184,6 +184,9 @@
         </div>
     </div>
 
+    </div>
+
+
     <!-- TABLA DE CLIENTES DE LA PLATAFORMA SAAS (TALLERES SUSCRITOS) -->
     <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl space-y-4">
         <div class="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -306,16 +309,20 @@
             <div class="text-2xl font-extrabold font-mono text-sky-400 mt-1">{{ metricas.total_cobrado|clp }}</div>
             <div class="text-xs text-sky-400/80 mt-1 font-mono font-semibold">Pendiente: {{ metricas.total_saldo_pendiente|clp }}</div>
         </div>
-        <div
-            class="bg-[#0F172A] p-5 rounded-2xl border shadow-xl {% if metricas.proyectos_sobrecosto > 0 %} border-red-800 bg-red-950/20 {% else %} border-slate-800 {% endif %}">
-            <div class="text-xs font-semibold text-slate-400 uppercase">OTs con Sobrecosto</div>
+        <div @click="showSobrecostoModal = true"
+            class="bg-[#0F172A] p-5 rounded-2xl border shadow-xl transition cursor-pointer group hover:scale-[1.01] {% if metricas.proyectos_sobrecosto > 0 %} border-red-800 bg-red-950/20 hover:border-red-500 {% else %} border-slate-800 hover:border-emerald-500 {% endif %}">
+            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider group-hover:text-white transition">OTs con Sobrecosto</div>
             <div
                 class="text-2xl font-extrabold font-mono mt-1 {% if metricas.proyectos_sobrecosto > 0 %} text-red-500 {% else %} text-emerald-400 {% endif %}">
                 {{ metricas.proyectos_sobrecosto }} OTs
             </div>
-            <div class="text-xs mt-1">
-                {% if metricas.proyectos_sobrecosto > 0 %}<span class="text-red-400 font-semibold">⚠️ Requiere
-                    revisión</span>{% else %}<span class="text-slate-500">✓ En presupuesto</span>{% endif %}
+            <div class="text-xs mt-1 flex items-center justify-between">
+                {% if metricas.proyectos_sobrecosto > 0 %}
+                <span class="text-red-400 font-semibold">⚠️ Requiere revisión</span>
+                {% else %}
+                <span class="text-slate-500">✓ En presupuesto</span>
+                {% endif %}
+                <span class="text-[11px] text-slate-400 group-hover:text-sky-400 transition font-medium">🔍 Ver OTs &rarr;</span>
             </div>
         </div>
     </div>
@@ -387,5 +394,105 @@
 
     </div>
     {% endif %}
+
+    <!-- MODAL DE OTS CON SOBRECOSTO / ADVERTENCIA (Disponible para todos los usuarios) -->
+    <div x-show="showSobrecostoModal" x-cloak
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm"
+        @keydown.escape.window="showSobrecostoModal = false">
+        <div
+            class="bg-slate-900 border border-slate-700 rounded-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden flex flex-col shadow-2xl">
+            <!-- Modal Header -->
+            <div class="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-red-950 border border-red-800 text-red-400 flex items-center justify-center font-bold text-lg">
+                        ⚠️
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white">Ordenes de Trabajo con Advertencia de Sobrecosto</h3>
+                        <p class="text-xs text-slate-400">OTs cuyo costo real total supera el presupuesto inicial estimado</p>
+                    </div>
+                </div>
+                <button @click="showSobrecostoModal = false"
+                    class="text-slate-400 hover:text-white p-2 text-xl font-bold focus:outline-none">
+                    ✕
+                </button>
+            </div>
+            
+            <!-- Modal Body: Tabla de OTs en Sobrecosto -->
+            <div class="p-5 overflow-y-auto flex-1 space-y-4">
+                {% if metricas.proyectos_sobrecosto > 0 %}
+                <div class="p-3 bg-red-950/40 border border-red-800/60 rounded-xl text-xs text-red-300 flex items-center gap-2">
+                    <span>📢</span>
+                    <span>Se han detectado <strong>{{ metricas.proyectos_sobrecosto }}</strong> OT(s) desviadas del costo presupuestado. Revisa las mermas, compras o mano de obra acumulada.</span>
+                </div>
+                
+                <div class="overflow-x-auto rounded-xl border border-slate-800">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-950 text-slate-400 uppercase border-b border-slate-800">
+                            <tr>
+                                <th class="p-3">Código OT</th>
+                                <th class="p-3">Proyecto & Cliente</th>
+                                <th class="p-3 whitespace-nowrap">Costo Presupuestado</th>
+                                <th class="p-3 whitespace-nowrap">Costo Real Incurrido</th>
+                                <th class="p-3 whitespace-nowrap">Sobrecosto (Desviación)</th>
+                                <th class="p-3 text-right">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800 text-slate-300">
+                            {% for m in metricas.proyectos_metricas %}
+                            {% if m.sobrecosto_detectado %}
+                            <tr class="hover:bg-red-950/20 transition">
+                                <td class="p-3 font-mono font-bold text-sky-400 whitespace-nowrap">
+                                    {{ m.proyecto.codigo_ot }}
+                                </td>
+                                <td class="p-3">
+                                    <div class="font-semibold text-white">{{ m.proyecto.nombre_proyecto }}</div>
+                                    <div class="text-[11px] text-slate-400">{{ m.proyecto.id_cliente.razon_social }}</div>
+                                </td>
+                                <td class="p-3 font-mono text-slate-300 whitespace-nowrap">
+                                    {{ m.costo_presupuestado|clp }}
+                                </td>
+                                <td class="p-3 font-mono font-bold text-white whitespace-nowrap">
+                                    {{ m.costo_real_total|clp }}
+                                </td>
+                                <td class="p-3 whitespace-nowrap">
+                                    <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-[#DC2626] text-white shadow shadow-red-600/30">
+                                        +{{ m.desviacion_costo|clp }} (+{{ m.desviacion_pct|pct_entero }}%)
+                                    </span>
+                                </td>
+                                <td class="p-3 text-right whitespace-nowrap">
+                                    <a href="{% url 'rentabilidad_cobranzas:proyecto_rentabilidad_detail' m.proyecto.pk %}"
+                                        class="px-3 py-1.5 bg-slate-800 hover:bg-sky-900 text-sky-300 border border-slate-700 hover:border-sky-600 rounded-lg font-semibold text-xs transition inline-flex items-center gap-1">
+                                        Ver Informe Rentabilidad &rarr;
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="py-12 text-center space-y-3">
+                    <div class="text-4xl">🎉</div>
+                    <h4 class="text-base font-bold text-white">¡No hay sobrecostos registrados!</h4>
+                    <p class="text-xs text-slate-400 max-w-md mx-auto">Todas las Ordenes de Trabajo activas e históricas del taller se encuentran dentro o por debajo de su presupuesto asignado.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-between items-center">
+                <a href="{% url 'rentabilidad_cobranzas:dashboard_rentabilidad' %}"
+                    class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-sky-400 rounded-xl text-xs font-semibold border border-slate-700 transition flex items-center gap-1">
+                    📈 Ir al Dashboard Completo de Rentabilidad &rarr;
+                </a>
+                <button @click="showSobrecostoModal = false"
+                    class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

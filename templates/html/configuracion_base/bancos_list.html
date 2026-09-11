@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block title %}Mantenedor de Bancos - TallerLogik{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-white tracking-tight">🏦 Mantenedor de Bancos</h1>
+            <p class="text-sm text-slate-400">Administra las cuentas bancarias del taller para pagos y transferencias.</p>
+        </div>
+        <a href="{% url 'configuracion_base:banco_create' %}" 
+           class="inline-flex items-center space-x-2 px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white text-sm font-semibold rounded-xl transition-all shadow-md shadow-sky-600/20">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            <span>Nuevo Banco</span>
+        </a>
+    </div>
+
+    <!-- Tabla -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-300">
+                <thead class="bg-slate-950/60 text-xs uppercase font-bold text-slate-400 border-b border-slate-800">
+                    <tr>
+                        <th class="px-6 py-4">Banco</th>
+                        <th class="px-6 py-4">Código SBIF</th>
+                        <th class="px-6 py-4">N° Cuenta</th>
+                        <th class="px-6 py-4">Tipo Cuenta</th>
+                        <th class="px-6 py-4 text-center">Estado</th>
+                        <th class="px-6 py-4 text-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/60">
+                    {% for banco in bancos %}
+                    <tr class="hover:bg-slate-800/40 transition-colors">
+                        <td class="px-6 py-4 font-semibold text-white">
+                            {{ banco.nombre_banco }}
+                        </td>
+                        <td class="px-6 py-4 font-mono text-xs text-sky-400">
+                            {{ banco.codigo_sbif|default:"-" }}
+                        </td>
+                        <td class="px-6 py-4 font-mono text-xs text-slate-200">
+                            {{ banco.numero_cuenta|default:"-" }}
+                        </td>
+                        <td class="px-6 py-4 text-slate-300">
+                            {{ banco.tipo_cuenta }}
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            {% if banco.activo %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-300 border border-emerald-800">
+                                Activo
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700">
+                                Inactivo
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-right space-x-2">
+                            <a href="{% url 'configuracion_base:banco_update' banco.pk %}" 
+                               class="text-xs text-sky-400 hover:text-sky-300 font-medium">Editar</a>
+                            <form action="{% url 'configuracion_base:banco_delete' banco.pk %}" method="POST" class="inline" onsubmit="return confirm('¿Eliminar este banco?');">
+                                {% csrf_token %}
+                                <button type="submit" class="text-xs text-red-400 hover:text-red-300 font-medium">Eliminar</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center text-slate-500">
+                            No hay bancos registrados. Haz clic en "Nuevo Banco" para registrar el primero.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

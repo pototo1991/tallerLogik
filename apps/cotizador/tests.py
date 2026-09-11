@@ -215,4 +215,45 @@ class CotizadorTestCase(TestCase):
 
         self.assertEqual(cotizacion.fecha_entrega_sugerida, fecha_fija)
 
+    def test_editar_precio_venta_neto_recalcula_margen(self):
+        """Verifica que al editar el precio de venta neto, se recalculen el porcentaje y monto de margen."""
+        cotizacion = Cotizacion.objects.create(
+            id_empresa=self.empresa,
+            id_cliente=self.cliente,
+            numero_cotizacion="COT-2026-007",
+            version=1,
+            titulo_propuesta="Mueble Recepción",
+            costo_materiales_estimado=Decimal("650000.00"),
+            margen_objetivo_pct=Decimal("35.00")
+        )
+        cotizacion.calcular_totales()
+        # Inicialmente 650.000 / (1 - 0.35) = 1.000.000.00
+        self.assertEqual(cotizacion.precio_venta_neto, Decimal("1000000.00"))
+        self.assertEqual(cotizacion.monto_margen_estimado, Decimal("350000.00"))
+
+        # Editar precio de venta neto a 1.200.000 via POST
+        self.client.force_login(self.usuario)
+        from django.urls import reverse
+        url = reverse('cotizador:cotizacion_detail', kwargs={'pk': cotizacion.pk})
+        response = self.client.post(
+            url,
+            data={
+                'origen_cambio': 'precio',
+                'precio_venta_neto_clean': '1200000.00',
+                'precio_venta_neto': '1.200.000',
+                'margen_objetivo_pct': '35.00',
+                'dias_validez': '15',
+                'costo_indirecto_cif_estimado': '0'
+            }
+        )
+        self.assertEqual(response.status_code, 302)
+        cotizacion.refresh_from_db()
+        # Nuevo precio = 1.200.000.00
+        self.assertEqual(cotizacion.precio_venta_neto, Decimal("1200000.00"))
+        # Margen = (1200000 - 650000) / 1200000 * 100 = 45.83%
+        self.assertEqual(cotizacion.margen_objetivo_pct, Decimal("45.83"))
+        # Monto margen = 1200000 - 650000 = 550.000.00
+        self.assertEqual(cotizacion.monto_margen_estimado, Decimal("550000.00"))
+
+
 

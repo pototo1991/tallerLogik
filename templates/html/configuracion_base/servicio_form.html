@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ titulo }} - TallerLogik{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="flex items-center justify-between bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl">
+        <div>
+            <h1 class="text-2xl font-bold text-white tracking-tight">{{ titulo }}</h1>
+            <p class="text-xs text-slate-400 mt-1">Ingresa y gestiona la tarifa del servicio, flete, montaje o subcontrato en el tarifario maestro</p>
+        </div>
+        <a href="{% url 'configuracion_base:servicios_list' %}" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700 transition">
+            &larr; Volver al Tarifario
+        </a>
+    </div>
+
+    <div class="bg-[#0F172A] p-6 sm:p-8 rounded-2xl border border-slate-800 shadow-xl">
+        <form method="POST" class="space-y-6" novalidate>
+            {% csrf_token %}
+
+            {% if form.errors %}
+            <div class="p-4 bg-red-950/80 border border-red-800 rounded-xl text-red-200 text-xs space-y-1 mb-4">
+                <div class="font-bold">Por favor corrige los siguientes errores:</div>
+                <ul class="list-disc list-inside">
+                    {% for field in form %}
+                    {% for error in field.errors %}
+                    <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                    {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <!-- Sección 1: Identificación del Servicio -->
+            <div class="space-y-4">
+                <h3 class="text-sm font-bold text-sky-400 uppercase tracking-wider border-b border-slate-800 pb-2">
+                    🚚 Identificación & Categorización del Servicio
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">
+                            Nombre del Servicio / Traslado *
+                        </label>
+                        {{ form.nombre_servicio }}
+                        {% if form.nombre_servicio.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.nombre_servicio.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">
+                            Categoría *
+                        </label>
+                        {{ form.categoria }}
+                        {% if form.categoria.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.categoria.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">
+                            Unidad de Medida * (Global, Viaje, Día, Hora)
+                        </label>
+                        {{ form.unidad_medida }}
+                        {% if form.unidad_medida.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.unidad_medida.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección 2: Tarifario & Condición Operativa -->
+            <div class="space-y-4">
+                <h3 class="text-sm font-bold text-sky-400 uppercase tracking-wider border-b border-slate-800 pb-2">
+                    💰 Tarifario & Condición Operativa
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">
+                            Costo Base Unitario ($) *
+                        </label>
+                        {{ form.costo_base_unitario }}
+                        {% if form.costo_base_unitario.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.costo_base_unitario.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">
+                            Observaciones / Detalles
+                        </label>
+                        {{ form.observaciones }}
+                        {% if form.observaciones.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.observaciones.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-2 pt-2">
+                    {{ form.activo }}
+                    <label for="{{ form.activo.id_for_label }}" class="text-xs text-slate-300 font-medium cursor-pointer">
+                        Servicio Activo para Cotizar y Asignar en Proyectos
+                    </label>
+                </div>
+            </div>
+
+            <!-- Botones -->
+            <div class="flex justify-end space-x-3 pt-4 border-t border-slate-800">
+                <a href="{% url 'configuracion_base:servicios_list' %}" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700 transition">
+                    Cancelar
+                </a>
+                <button type="submit" class="px-6 py-2.5 bg-[#0284C7] hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-sky-500/20">
+                    Guardar Servicio
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

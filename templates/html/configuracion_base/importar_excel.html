@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}Carga Masiva desde Excel - TallerLogik{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="flex items-center justify-between bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl">
+        <div>
+            <h1 class="text-2xl font-bold text-white tracking-tight">📥 Carga Masiva desde Excel / CSV</h1>
+            <p class="text-xs text-slate-400 mt-1">Importa tus listados de clientes, catálogo de materiales o proveedores rápidamente</p>
+        </div>
+        <a href="{% url 'configuracion_base:materiales_list' %}" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700 transition">
+            &larr; Volver a Materiales
+        </a>
+    </div>
+
+    <div class="bg-[#0F172A] p-6 sm:p-8 rounded-2xl border border-slate-800 shadow-xl space-y-6">
+        
+        <!-- Instrucciones y Plantillas -->
+        <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-4 space-y-2">
+            <h3 class="text-sm font-bold text-sky-400 flex items-center space-x-2">
+                <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span>Instrucciones para la Carga</span>
+            </h3>
+            <p class="text-xs text-slate-300">
+                Asegúrate de que tu archivo Excel contenga encabezados claros en la primera fila. Formatos soportados: <code class="bg-slate-800 px-1.5 py-0.5 rounded text-sky-300 font-mono">.xlsx</code>, <code class="bg-slate-800 px-1.5 py-0.5 rounded text-sky-300 font-mono">.xls</code>, <code class="bg-slate-800 px-1.5 py-0.5 rounded text-sky-300 font-mono">.csv</code>.
+            </p>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" class="space-y-6" novalidate>
+            {% csrf_token %}
+
+            {% if form.errors %}
+            <div class="p-4 bg-red-950/80 border border-red-800 rounded-xl text-red-200 text-xs space-y-1 mb-4">
+                <div class="font-bold">Por favor corrige los siguientes errores:</div>
+                <ul class="list-disc list-inside">
+                    {% for field in form %}
+                    {% for error in field.errors %}
+                    <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                    {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <!-- Sección 1: Configuración de Archivo & Origen -->
+            <div class="space-y-4">
+                <h3 class="text-sm font-bold text-sky-400 uppercase tracking-wider border-b border-slate-800 pb-2">
+                    📄 Configuración de Archivo & Tipo de Datos
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">
+                            Tipo de Datos a Cargar *
+                        </label>
+                        {{ form.tipo_datos }}
+                        {% if form.tipo_datos.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.tipo_datos.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">
+                            Archivo Excel / CSV *
+                        </label>
+                        {{ form.archivo_excel }}
+                        {% if form.archivo_excel.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.archivo_excel.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botones -->
+            <div class="flex justify-end space-x-3 pt-4 border-t border-slate-800">
+                <a href="{% url 'configuracion_base:materiales_list' %}" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700 transition">
+                    Cancelar
+                </a>
+                <button type="submit" class="inline-flex items-center space-x-2 px-6 py-2.5 bg-[#0284C7] hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-sky-500/20">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                    </svg>
+                    <span>Procesar e Importar</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -6,7 +6,10 @@ from .views import (
     MaterialAjustarStockView, MaterialHistorialMovimientosView,
     OperarioListView, OperarioCreateView, OperarioUpdateView, OperarioResetPasswordView, OperarioToggleActivoView,
     MaterialGlobalBuscarView, MaterialImportarActionView,
-    EjecutarScrapingManualView, ScrapingTaskStatusView
+    EjecutarScrapingManualView, ScrapingTaskStatusView,
+    BancoListView, BancoCreateView, BancoUpdateView, BancoDeleteView,
+    ServicioTarifaListView, ServicioTarifaCreateView, ServicioTarifaUpdateView, ServicioTarifaDeleteView,
+    ImportarExcelView
 )
 
 app_name = 'configuracion_base'
@@ -43,5 +46,21 @@ urlpatterns = [
     path('operarios/<uuid:pk>/editar/', OperarioUpdateView.as_view(), name='operario_update'),
     path('operarios/<uuid:pk>/reestablecer-password/', OperarioResetPasswordView.as_view(), name='operario_reset_password'),
     path('operarios/<uuid:pk>/toggle-activo/', OperarioToggleActivoView.as_view(), name='operario_toggle_activo'),
+
+    # Rutas de Bancos
+    path('bancos/', BancoListView.as_view(), name='bancos_list'),
+    path('bancos/crear/', BancoCreateView.as_view(), name='banco_create'),
+    path('bancos/<uuid:pk>/editar/', BancoUpdateView.as_view(), name='banco_update'),
+    path('bancos/<uuid:pk>/eliminar/', BancoDeleteView.as_view(), name='banco_delete'),
+
+    # Rutas de Servicios & Tarifas
+    path('servicios/', ServicioTarifaListView.as_view(), name='servicios_list'),
+    path('servicios/crear/', ServicioTarifaCreateView.as_view(), name='servicio_create'),
+    path('servicios/<uuid:pk>/editar/', ServicioTarifaUpdateView.as_view(), name='servicio_update'),
+    path('servicios/<uuid:pk>/eliminar/', ServicioTarifaDeleteView.as_view(), name='servicio_delete'),
+
+    # Carga Masiva desde Excel
+    path('importar-excel/', ImportarExcelView.as_view(), name='importar_excel'),
 ]
+
 

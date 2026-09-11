@@ -28,10 +28,28 @@ class ItemProyectoRectificacionForm(forms.ModelForm):
         fields = ['tipo_item', 'id_material', 'descripcion', 'cantidad', 'costo_unitario']
         widgets = {
             'tipo_item': forms.Select(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500'}),
-            'id_material': forms.Select(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500'}),
-            'descripcion': forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'placeholder': 'Ej. Plancha extra por ajuste de descuadre en muro'}),
-            'cantidad': forms.NumberInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'step': '0.01'}),
-            'costo_unitario': forms.NumberInput(attrs={'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500', 'step': '1', 'placeholder': '15000'}),
+            'id_material': forms.Select(attrs={
+                'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500',
+                'x-model': 'selectedMaterial',
+                '@change': 'onMaterialChange()'
+            }),
+            'descripcion': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500',
+                'placeholder': 'Ej. Plancha extra por ajuste de descuadre en muro',
+                'x-model': 'descripcion'
+            }),
+            'cantidad': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 font-mono',
+                'step': '0.01',
+                'x-model': 'cantidad'
+            }),
+            'costo_unitario': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 font-mono font-bold',
+                'step': '1',
+                'placeholder': '15000',
+                'x-model': 'costo',
+                'required': 'required'
+            }),
         }
 
 

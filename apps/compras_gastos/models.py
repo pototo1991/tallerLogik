@@ -25,7 +25,10 @@ class FacturaCompra(TenantAwareModel):
     fecha_emision = models.DateField(default=timezone.now)
     monto_total_neto = models.DecimalField(max_digits=12, decimal_places=2)
     forma_pago = models.CharField(max_length=50, choices=FORMAS_PAGO, default='TRANSFERENCIA', verbose_name='Forma de Pago')
-    banco_origen = models.CharField(max_length=100, blank=True, null=True, verbose_name='Banco / Institución')
+    banco_origen = models.CharField(max_length=100, blank=True, null=True, verbose_name='Banco / Institución Textual')
+    id_banco = models.ForeignKey('configuracion_base.Banco', on_delete=models.SET_NULL, null=True, blank=True, related_name='facturas_compra', verbose_name='Banco Registrado')
+    fecha_vencimiento_cheque = models.DateField(blank=True, null=True, verbose_name='Fecha Vencimiento Cheque / Plazo')
+    numero_cheque = models.CharField(max_length=100, blank=True, null=True, verbose_name='N° de Cheque')
     observaciones = models.TextField(blank=True, null=True)
     fecha_registro = models.DateTimeField(auto_now_add=True)
     id_usuario_registro = models.ForeignKey(Usuario, on_delete=models.RESTRICT, related_name='facturas_registradas')
@@ -38,6 +41,11 @@ class FacturaCompra(TenantAwareModel):
         constraints = [
             models.UniqueConstraint(fields=['id_empresa', 'numero_factura', 'proveedor'], name='unique_factura_proveedor_per_tenant')
         ]
+
+    @property
+    def total_ots_distintas(self):
+        """Retorna la cantidad de Órdenes de Trabajo (OTs) distintas a las que se distribuyó la factura."""
+        return self.gastos_distribuidos.values('id_proyecto').distinct().count()
 
     def __str__(self):
         return f"Factura {self.numero_factura} - {self.proveedor} (${self.monto_total_neto})"

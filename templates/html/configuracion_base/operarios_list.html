@@ -42,28 +42,29 @@
     </div>
 
     <!-- Tabla del Personal -->
+    <div class="bg-[#0F172A] rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm text-slate-300">
                 <thead class="bg-slate-900 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">
                     <tr>
-                        <th class="px-4 py-3.5 whitespace-nowrap">Nombre Completo</th>
-                        <th class="px-4 py-3.5 whitespace-nowrap">Correo Electrónico</th>
-                        <th class="px-4 py-3.5 whitespace-nowrap">Rol en el Taller</th>
-                        <th class="px-4 py-3.5 whitespace-nowrap">Costo/Hora ($)</th>
-                        <th class="px-4 py-3.5 whitespace-nowrap">Estado</th>
-                        <th class="px-4 py-3.5 text-right whitespace-nowrap">Acciones</th>
+                        <th class="px-6 py-4 whitespace-nowrap">Nombre Completo</th>
+                        <th class="px-6 py-4 whitespace-nowrap">Correo Electrónico</th>
+                        <th class="px-6 py-4 whitespace-nowrap">Rol en el Taller</th>
+                        <th class="px-6 py-4 whitespace-nowrap">Costo/Hora ($)</th>
+                        <th class="px-6 py-4 whitespace-nowrap">Estado</th>
+                        <th class="px-6 py-4 text-right whitespace-nowrap">Acciones</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-800">
                     {% for op in operarios %}
                     <tr class="hover:bg-slate-900/50 transition">
-                        <td class="px-4 py-3.5 font-semibold text-white">
+                        <td class="px-6 py-4 font-semibold text-white">
                             {{ op.nombre_completo }}
                         </td>
-                        <td class="px-4 py-3.5 text-xs font-mono text-slate-400">
+                        <td class="px-6 py-4 text-xs font-mono text-slate-400">
                             {{ op.correo_electronico }}
                         </td>
-                        <td class="px-4 py-3.5 whitespace-nowrap">
+                        <td class="px-6 py-4 whitespace-nowrap">
                             <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap
                                 {% if op.rol == 'dueno_taller' %} bg-emerald-950 text-emerald-300 border border-emerald-800
                                 {% elif op.rol == 'jefe_taller' %} bg-amber-950 text-amber-300 border border-amber-800
@@ -71,10 +72,10 @@
                                 {{ op.get_rol_display }}
                             </span>
                         </td>
-                        <td class="px-4 py-3.5 font-mono font-bold text-emerald-400 whitespace-nowrap">
+                        <td class="px-6 py-4 font-mono font-bold text-emerald-400 whitespace-nowrap">
                             {{ op.costo_hora|clp }} / hr
                         </td>
-                        <td class="px-4 py-3.5 text-xs whitespace-nowrap">
+                        <td class="px-6 py-4 text-xs whitespace-nowrap">
                             {% if op.activo %}
                             <span class="text-emerald-400 font-semibold flex items-center gap-1.5 whitespace-nowrap">
                                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Activo
@@ -85,53 +86,55 @@
                             </span>
                             {% endif %}
                         </td>
-                        <td class="px-4 py-3.5 text-right space-x-2 whitespace-nowrap">
-                            <!-- Botón Editar Datos del Miembro (Dueño o Superadmin) -->
-                            {% if user.rol in 'superadmin_saas,dueno_taller' %}
-                            <a href="{% url 'configuracion_base:operario_update' op.id %}"
-                               class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-300 bg-slate-800 border border-slate-700 hover:bg-slate-700 hover:text-white transition whitespace-nowrap">
-                                ✏️ Editar
-                            </a>
-                            {% endif %}
-
-                            <!-- Botón Restablecer Contraseña (Dueño o Jefe de Taller) -->
-                            {% if user.rol in 'superadmin_saas,dueno_taller,jefe_taller' %}
-                            <button type="button"
-                                    @click="openResetModal('{{ op.id }}', '{{ op.nombre_completo|escapejs }}', '{% url 'configuracion_base:operario_reset_password' op.id %}')"
-                                    class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold text-sky-400 bg-sky-950/60 border border-sky-800 hover:bg-sky-900 hover:text-sky-200 transition whitespace-nowrap">
-                                🔑 Restablecer Clave
-                            </button>
-                            {% endif %}
-
-                            <!-- Botón Activar/Desactivar (EXCLUSIVO SOLO Dueño del Taller o Superadmin) -->
-                            {% if user.rol in 'superadmin_saas,dueno_taller' %}
-                                {% if op.id == user.id %}
-                                <span class="inline-block px-2.5 py-1 text-xs text-slate-500 italic whitespace-nowrap">
-                                    (Tu usuario)
-                                </span>
-                                {% else %}
-                                <form method="POST" action="{% url 'configuracion_base:operario_toggle_activo' op.id %}" class="inline">
-                                    {% csrf_token %}
-                                    {% if op.activo %}
-                                    <button type="submit" 
-                                            onclick="return confirm('¿Confirmas que deseas DESACTIVAR al usuario {{ op.nombre_completo|escapejs }}?')"
-                                            class="px-2.5 py-1 rounded-lg text-xs font-semibold text-red-400 bg-red-950/60 border border-red-800 hover:bg-red-900 hover:text-red-200 transition whitespace-nowrap">
-                                        Desactivar
-                                    </button>
-                                    {% else %}
-                                    <button type="submit" 
-                                            class="px-2.5 py-1 rounded-lg text-xs font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-800 hover:bg-emerald-900 hover:text-emerald-200 transition whitespace-nowrap">
-                                        Activar
-                                    </button>
-                                    {% endif %}
-                                </form>
+                        <td class="px-6 py-4 text-right whitespace-nowrap">
+                            <div class="inline-flex items-center justify-end gap-1.5">
+                                <!-- Botón Editar Datos del Miembro (Dueño o Superadmin) -->
+                                {% if user.rol in 'superadmin_saas,dueno_taller' %}
+                                <a href="{% url 'configuracion_base:operario_update' op.id %}"
+                                   class="inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 bg-slate-800 border border-slate-700 hover:bg-slate-700 hover:text-white transition whitespace-nowrap">
+                                    ✏️ Editar
+                                </a>
                                 {% endif %}
-                            {% endif %}
+
+                                <!-- Botón Restablecer Contraseña (Dueño o Jefe de Taller) -->
+                                {% if user.rol in 'superadmin_saas,dueno_taller,jefe_taller' %}
+                                <button type="button"
+                                        @click="openResetModal('{{ op.id }}', '{{ op.nombre_completo|escapejs }}', '{% url 'configuracion_base:operario_reset_password' op.id %}')"
+                                        class="inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-semibold text-sky-400 bg-sky-950/60 border border-sky-800 hover:bg-sky-900 hover:text-sky-200 transition whitespace-nowrap">
+                                    🔑 Clave
+                                </button>
+                                {% endif %}
+
+                                <!-- Botón Activar/Desactivar (EXCLUSIVO SOLO Dueño del Taller o Superadmin) -->
+                                {% if user.rol in 'superadmin_saas,dueno_taller' %}
+                                    {% if op.id == user.id %}
+                                    <span class="inline-block px-2.5 py-1 text-xs text-slate-500 italic whitespace-nowrap">
+                                        (Tu usuario)
+                                    </span>
+                                    {% else %}
+                                    <form method="POST" action="{% url 'configuracion_base:operario_toggle_activo' op.id %}" class="inline">
+                                        {% csrf_token %}
+                                        {% if op.activo %}
+                                        <button type="submit" 
+                                                onclick="return confirm('¿Confirmas que deseas DESACTIVAR al usuario {{ op.nombre_completo|escapejs }}?')"
+                                                class="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-red-400 bg-red-950/60 border border-red-800 hover:bg-red-900 hover:text-red-200 transition whitespace-nowrap">
+                                            Desactivar
+                                        </button>
+                                        {% else %}
+                                        <button type="submit" 
+                                                class="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-800 hover:bg-emerald-900 hover:text-emerald-200 transition whitespace-nowrap">
+                                            Activar
+                                        </button>
+                                        {% endif %}
+                                    </form>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="px-4 py-12 text-center text-slate-500">
+                        <td colspan="6" class="px-6 py-12 text-center text-slate-500">
                             No hay miembros registrados aún en este taller.
                         </td>
                     </tr>

@@ -3,79 +3,168 @@
 {% block title %}{{ titulo }} - TallerLogik{% endblock %}
 
 {% block content %}
-<div class="max-w-xl mx-auto space-y-6">
-    <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-white tracking-tight">{{ titulo }}</h1>
-        <a href="{% url 'configuracion_base:operarios_list' %}" class="text-xs font-semibold text-slate-400 hover:text-white transition">
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="flex items-center justify-between bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl">
+        <div>
+            <h1 class="text-2xl font-bold text-white tracking-tight">{{ titulo }}</h1>
+            <p class="text-xs text-slate-400 mt-1">Registra los datos de identificación, acceso y tarifario del miembro del equipo</p>
+        </div>
+        <a href="{% url 'configuracion_base:operarios_list' %}" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700 transition">
             &larr; Volver al Equipo
         </a>
     </div>
 
     <div class="bg-[#0F172A] p-6 sm:p-8 rounded-2xl border border-slate-800 shadow-xl">
-        <form method="POST" class="space-y-4" x-data="{
+        <form method="POST" class="space-y-6" novalidate x-data="{
             email: '{{ form.correo_electronico.value|default:'' }}',
             emailValido: null,
+            mensajeEmail: '',
+            costoDisplay: '{{ form.costo_hora.value|default:'' }}',
             validarEmail() {
                 if (!this.email || this.email.trim() === '') {
                     this.emailValido = null;
+                    this.mensajeEmail = '';
                     return;
                 }
-                const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-                this.emailValido = re.test(this.email.trim());
+                const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (re.test(this.email.trim())) {
+                    this.emailValido = true;
+                    this.mensajeEmail = '✓ Correo válido';
+                } else {
+                    this.emailValido = false;
+                    this.mensajeEmail = '❌ El correo debe tener el formato operario@taller.com';
+                }
+            },
+            initCosto() {
+                if (!this.costoDisplay) return;
+                let str = this.costoDisplay.toString().trim().replace('$', '').trim();
+                if (!str) return;
+
+                if (/^\d+\.\d{1,2}$/.test(str)) {
+                    let num = Math.round(parseFloat(str));
+                    if (!isNaN(num)) {
+                        this.costoDisplay = num.toLocaleString('es-CL');
+                        return;
+                    }
+                }
+
+                let raw = str.replace(/[^0-9]/g, '');
+                if (raw) {
+                    let num = parseInt(raw, 10);
+                    if (!isNaN(num)) {
+                        this.costoDisplay = num.toLocaleString('es-CL');
+                    }
+                }
+            },
+            formatCosto(e) {
+                let raw = e.target.value.replace(/[^0-9]/g, '');
+                if (!raw) {
+                    this.costoDisplay = '';
+                    return;
+                }
+                let num = parseInt(raw, 10);
+                this.costoDisplay = num.toLocaleString('es-CL');
+            },
+            get costoFormatted() {
+                if (!this.costoDisplay) return '$0';
+                let raw = this.costoDisplay.toString().replace(/[^0-9]/g, '');
+                if (!raw) return '$0';
+                let num = parseInt(raw, 10);
+                return '$' + num.toLocaleString('es-CL');
             }
-        }" x-init="validarEmail()">
+        }" x-init="validarEmail(); initCosto();">
             {% csrf_token %}
 
-            <div>
-                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                    Nombre Completo *
-                </label>
-                {{ form.nombre_completo }}
-                {% if form.nombre_completo.errors %}<p class="text-xs text-red-400 mt-1">{{ form.nombre_completo.errors.0 }}</p>{% endif %}
-            </div>
-
-            <div>
-                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                    Correo Electrónico *
-                </label>
-                {{ form.correo_electronico }}
-                <p x-show="emailValido === false" x-cloak class="text-xs text-red-400 mt-1">
-                    El formato del correo electrónico no es válido (ejemplo: operario@taller.com).
-                </p>
-                {% if form.correo_electronico.errors %}<p class="text-xs text-red-400 mt-1">{{ form.correo_electronico.errors.0 }}</p>{% endif %}
-            </div>
-
-            {% if form.password %}
-            <div>
-                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                    Contraseña Inicial *
-                </label>
-                {{ form.password }}
-                {% if form.password.errors %}<p class="text-xs text-red-400 mt-1">{{ form.password.errors.0 }}</p>{% endif %}
+            {% if form.errors %}
+            <div class="p-4 bg-red-950/80 border border-red-800 rounded-xl text-red-200 text-xs space-y-1 mb-4">
+                <div class="font-bold">Por favor corrige los siguientes errores:</div>
+                <ul class="list-disc list-inside">
+                    {% for field in form %}
+                    {% for error in field.errors %}
+                    <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                    {% endfor %}
+                    {% endfor %}
+                </ul>
             </div>
             {% endif %}
 
-            <div>
-                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                    Rol en el Taller *
-                </label>
-                {{ form.rol }}
-                {% if form.rol.errors %}<p class="text-xs text-red-400 mt-1">{{ form.rol.errors.0 }}</p>{% endif %}
+            <!-- Sección 1: Información Personal & Acceso -->
+            <div class="space-y-4">
+                <h3 class="text-sm font-bold text-sky-400 uppercase tracking-wider border-b border-slate-800 pb-2">
+                    👤 Información Personal & Acceso
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">
+                            Nombre Completo *
+                        </label>
+                        {{ form.nombre_completo }}
+                        {% if form.nombre_completo.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.nombre_completo.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">
+                            Correo Electrónico *
+                        </label>
+                        {{ form.correo_electronico }}
+                        <div class="mt-1 flex items-center justify-between text-xs">
+                            <span x-text="mensajeEmail" :class="{
+                                'text-emerald-400 font-semibold': emailValido === true,
+                                'text-red-400 font-semibold': emailValido === false,
+                                'text-slate-400': emailValido === null
+                            }"></span>
+                        </div>
+                        {% if form.correo_electronico.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.correo_electronico.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    {% if form.password %}
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">
+                            Contraseña Inicial *
+                        </label>
+                        {{ form.password }}
+                        {% if form.password.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.password.errors.0 }}</p>{% endif %}
+                    </div>
+                    {% endif %}
+                </div>
             </div>
 
-            <div>
-                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                    Tarifa Costo/Hora Operario ($) *
-                </label>
-                {{ form.costo_hora }}
-                {% if form.costo_hora.errors %}<p class="text-xs text-red-400 mt-1">{{ form.costo_hora.errors.0 }}</p>{% endif %}
+            <!-- Sección 2: Rol & Tarifa Horaria -->
+            <div class="space-y-4">
+                <h3 class="text-sm font-bold text-sky-400 uppercase tracking-wider border-b border-slate-800 pb-2">
+                    💼 Rol & Tarifa Horaria
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">
+                            Rol en el Taller *
+                        </label>
+                        {{ form.rol }}
+                        {% if form.rol.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.rol.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1 flex items-center justify-between">
+                            <span>Tarifa Costo/Hora Operario</span>
+                            <span x-show="costoFormatted" x-cloak class="font-mono text-sky-400 font-bold bg-sky-950/80 px-2 py-0.5 rounded border border-sky-800/60 text-[11px]" x-text="costoFormatted + ' / hr'"></span>
+                        </label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 font-mono font-bold text-sm">
+                                $
+                            </span>
+                            {{ form.costo_hora }}
+                        </div>
+                        {% if form.costo_hora.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.costo_hora.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
             </div>
 
-            <div class="pt-6 flex justify-end space-x-3">
-                <a href="{% url 'configuracion_base:operarios_list' %}" class="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 transition">
+            <!-- Botones -->
+            <div class="flex justify-end space-x-3 pt-4 border-t border-slate-800">
+                <a href="{% url 'configuracion_base:operarios_list' %}" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700 transition">
                     Cancelar
                 </a>
-                <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-semibold text-white bg-[#0284C7] hover:bg-sky-500 transition shadow-lg shadow-sky-500/20">
+                <button type="submit" class="px-6 py-2.5 bg-[#0284C7] hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-sky-500/20">
                     Guardar Miembro
                 </button>
             </div>

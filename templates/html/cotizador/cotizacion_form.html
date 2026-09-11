@@ -3,74 +3,121 @@
 {% block title %}{{ titulo }} - TallerLogik{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto space-y-6">
-    <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-white tracking-tight">{{ titulo }}</h1>
-        <a href="{% url 'cotizador:cotizaciones_list' %}"
-            class="text-xs font-semibold text-slate-400 hover:text-white transition">
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="flex items-center justify-between bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl">
+        <div>
+            <h1 class="text-2xl font-bold text-white tracking-tight">{{ titulo }}</h1>
+            <p class="text-xs text-slate-400 mt-1">Presupuesto comercial con cálculo de margen sobre venta, CIF y vigencia</p>
+        </div>
+        <a href="{% url 'cotizador:cotizaciones_list' %}" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700 transition">
             &larr; Volver a Cotizaciones
         </a>
     </div>
 
     <div class="bg-[#0F172A] p-6 sm:p-8 rounded-2xl border border-slate-800 shadow-xl">
-        <form method="POST" class="space-y-4">
+        <form method="POST" class="space-y-6" novalidate>
             {% csrf_token %}
 
-            <div>
-                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                    Cliente *
-                </label>
-                {{ form.id_cliente }}
-                {% if form.id_cliente.errors %}
-                    <p class="text-xs text-red-400 mt-1">{{ form.id_cliente.errors.0 }}</p>
-                {% endif %}
+            {% if form.errors %}
+            <div class="p-4 bg-red-950/80 border border-red-800 rounded-xl text-red-200 text-xs space-y-1 mb-4">
+                <div class="font-bold">Por favor corrige los siguientes errores:</div>
+                <ul class="list-disc list-inside">
+                    {% for field in form %}
+                    {% for error in field.errors %}
+                    <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                    {% endfor %}
+                    {% endfor %}
+                </ul>
             </div>
+            {% endif %}
 
-            <div>
-                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                    Título de la Propuesta Comercial *
-                </label>
-                {{ form.titulo_propuesta }}
-                {% if form.titulo_propuesta.errors %}
-                    <p class="text-xs text-red-400 mt-1">{{ form.titulo_propuesta.errors.0 }}</p>
-                {% endif %}
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                        Margen Objetivo (%)
-                    </label>
-                    {{ form.margen_objetivo_pct }}
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                        Días de Validez
-                    </label>
-                    {{ form.dias_validez }}
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                        Costo Indirecto ($)
-                    </label>
-                    {{ form.costo_indirecto_cif_estimado }}
+            <!-- Sección 1: Cliente & Encabezado -->
+            <div class="space-y-4">
+                <h3 class="text-sm font-bold text-sky-400 uppercase tracking-wider border-b border-slate-800 pb-2">
+                    🏢 Cliente & Encabezado Comercial
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">
+                            Cliente *
+                        </label>
+                        {{ form.id_cliente }}
+                        {% if form.id_cliente.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.id_cliente.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">
+                            Título de la Propuesta Comercial *
+                        </label>
+                        {{ form.titulo_propuesta }}
+                        {% if form.titulo_propuesta.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.titulo_propuesta.errors.0 }}</p>{% endif %}
+                    </div>
                 </div>
             </div>
 
-            <div>
-                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                    Notas y Condiciones de Pago / Entrega
-                </label>
-                {{ form.notas_condiciones }}
+            <!-- Sección 2: Parámetros Financieros & Tiempos -->
+            <div class="space-y-4">
+                <h3 class="text-sm font-bold text-sky-400 uppercase tracking-wider border-b border-slate-800 pb-2">
+                    📊 Parámetros Financieros & Planificación
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">
+                            Margen Objetivo (%) *
+                        </label>
+                        {{ form.margen_objetivo_pct }}
+                        {% if form.margen_objetivo_pct.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.margen_objetivo_pct.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">
+                            Días de Validez *
+                        </label>
+                        {{ form.dias_validez }}
+                        {% if form.dias_validez.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.dias_validez.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">
+                            Costo Indirecto CIF ($)
+                        </label>
+                        {{ form.costo_indirecto_cif_estimado }}
+                        {% if form.costo_indirecto_cif_estimado.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.costo_indirecto_cif_estimado.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">
+                            Fecha Inicio Estimada
+                        </label>
+                        {{ form.fecha_inicio_estimada }}
+                        {% if form.fecha_inicio_estimada.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.fecha_inicio_estimada.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">
+                            Fecha Entrega Comprometida
+                        </label>
+                        {{ form.fecha_entrega_manual }}
+                        {% if form.fecha_entrega_manual.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.fecha_entrega_manual.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
             </div>
 
-            <div class="pt-6 flex justify-end space-x-3">
-                <a href="{% url 'cotizador:cotizaciones_list' %}"
-                    class="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 transition">
+            <!-- Sección 3: Condiciones Comerciales -->
+            <div class="space-y-4">
+                <h3 class="text-sm font-bold text-sky-400 uppercase tracking-wider border-b border-slate-800 pb-2">
+                    📝 Condiciones Comerciales & Notas
+                </h3>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">
+                        Notas y Condiciones de Pago / Entrega
+                    </label>
+                    {{ form.notas_condiciones }}
+                    {% if form.notas_condiciones.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.notas_condiciones.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+
+            <!-- Botones -->
+            <div class="flex justify-end space-x-3 pt-4 border-t border-slate-800">
+                <a href="{% url 'cotizador:cotizaciones_list' %}" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700 transition">
                     Cancelar
                 </a>
-                <button type="submit"
-                    class="px-5 py-2.5 rounded-xl text-xs font-semibold text-white bg-[#0284C7] hover:bg-sky-500 transition shadow-lg shadow-sky-500/20">
+                <button type="submit" class="px-6 py-2.5 bg-[#0284C7] hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-sky-500/20">
                     Crear y Agregar Ítems
                 </button>
             </div>

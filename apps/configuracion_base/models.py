@@ -205,3 +205,69 @@ class MovimientoInventario(TenantAwareModel):
     def __str__(self):
         return f"{self.get_tipo_movimiento_display()} - {self.id_material.nombre}: {self.cantidad} (Stock: {self.stock_resultante})"
 
+
+class Banco(TenantAwareModel):
+    """Mantenedor de Bancos de la empresa/taller."""
+    TIPOS_CUENTA = (
+        ('Cuenta Corriente', 'Cuenta Corriente'),
+        ('Cuenta Vista', 'Cuenta Vista'),
+        ('Cuenta Ahorro', 'Cuenta Ahorro'),
+        ('Cuenta Nómina', 'Cuenta Nómina'),
+    )
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    nombre_banco = models.CharField(max_length=150, verbose_name='Nombre del Banco')
+    codigo_sbif = models.CharField(max_length=20, blank=True, null=True, verbose_name='Código SBIF / Identificador')
+    numero_cuenta = models.CharField(max_length=100, blank=True, null=True, verbose_name='N° de Cuenta Corriente / Vista')
+    tipo_cuenta = models.CharField(max_length=50, choices=TIPOS_CUENTA, default='Cuenta Corriente', verbose_name='Tipo de Cuenta')
+    activo = models.BooleanField(default=True, verbose_name='Activo')
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'bancos'
+        verbose_name = 'Banco'
+        verbose_name_plural = 'Bancos'
+        ordering = ['nombre_banco']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['id_empresa', 'numero_cuenta'],
+                condition=models.Q(numero_cuenta__isnull=False) & ~models.Q(numero_cuenta=''),
+                name='unique_tenant_banco_numero_cuenta'
+            )
+        ]
+
+    def __str__(self):
+        if self.numero_cuenta:
+            return f"{self.nombre_banco} - {self.tipo_cuenta} ({self.numero_cuenta})"
+        return self.nombre_banco
+
+
+class ServicioTarifa(TenantAwareModel):
+    """Tarifario maestro de servicios externos, fletes, traslados y montajes en obra."""
+    CATEGORIAS = (
+        ('Flete_Traslado', 'Flete y Traslado'),
+        ('Montaje_Obra', 'Montaje en Obra'),
+        ('Instalacion_Especial', 'Instalación Especial / Eléctrica'),
+        ('Subcontrato', 'Subcontrato / Servicio Tercero'),
+        ('Otro', 'Otro Servicio'),
+    )
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    nombre_servicio = models.CharField(max_length=255, verbose_name='Nombre del Servicio')
+    categoria = models.CharField(max_length=100, choices=CATEGORIAS, default='Flete_Traslado', verbose_name='Categoría')
+    unidad_medida = models.CharField(max_length=50, default='Global', verbose_name='Unidad de Medida (Global, Día, Hora, Viaje)')
+    costo_base_unitario = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), verbose_name='Costo Base Estimado')
+    observaciones = models.TextField(blank=True, null=True, verbose_name='Notas / Descripción')
+    activo = models.BooleanField(default=True, verbose_name='Activo')
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'servicios_tarifas'
+        verbose_name = 'Servicio / Tarifa'
+        verbose_name_plural = 'Servicios / Tarifas'
+        ordering = ['categoria', 'nombre_servicio']
+
+    def __str__(self):
+        return f"{self.nombre_servicio} ({self.get_categoria_display()}) - ${self.costo_base_unitario} / {self.unidad_medida}"
+
+

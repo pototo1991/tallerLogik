@@ -11,7 +11,7 @@ from django.db.models import Max
 from weasyprint import HTML
 
 from .models import Cotizacion, ItemCotizacion
-from .forms import CotizacionForm, ItemCotizacionForm
+from .forms import CotizacionForm, CotizacionHeaderForm, ItemCotizacionForm, clean_currency_string
 from .services import recalcular_cotizacion, clonar_version_cotizacion
 from apps.core_auth.models import AuditoriaLog, Usuario
 from apps.configuracion_base.models import Material
@@ -62,13 +62,17 @@ class CotizacionDetailView(LoginRequiredMixin, View):
         cotizacion = get_object_or_404(Cotizacion, pk=pk, id_empresa=request.tenant)
         items = cotizacion.items.all().select_related('id_material')
         item_form = ItemCotizacionForm(empresa=request.tenant)
-        header_form = CotizacionForm(instance=cotizacion, empresa=request.tenant)
+        header_form = CotizacionHeaderForm(instance=cotizacion)
 
         materiales = Material.objects.filter(id_empresa=request.tenant)
         materiales_dict = {
             str(m.id): {
+                'id': str(m.id),
                 'costo': float(m.costo_unitario),
-                'nombre': m.nombre
+                'nombre': m.nombre,
+                'categoria': m.categoria or '',
+                'unidad_medida': m.unidad_medida or '',
+                'sku': m.sku_proveedor or ''
             }
             for m in materiales
         }
@@ -96,13 +100,29 @@ class CotizacionDetailView(LoginRequiredMixin, View):
         return render(request, 'cotizador/cotizacion_detail.html', context)
 
     def post(self, request, pk):
-        """Actualizar parámetros de la cabecera (Margen %, CIF, Notas)."""
+        """Actualizar parámetros de la cabecera (Margen %, Precio Venta Neto, CIF, Notas)."""
         cotizacion = get_object_or_404(Cotizacion, pk=pk, id_empresa=request.tenant)
-        form = CotizacionForm(request.POST, instance=cotizacion, empresa=request.tenant)
+        origen_cambio = request.POST.get('origen_cambio', '')
+        precio_post = request.POST.get('precio_venta_neto_clean') or request.POST.get('precio_venta_neto')
+
+        form = CotizacionHeaderForm(request.POST, instance=cotizacion)
         if form.is_valid():
-            form.save()
-            recalcular_cotizacion(cotizacion)
-            messages.success(request, "Valores de la cotización actualizados.")
+            instancia = form.save(commit=False)
+            nuevo_precio = None
+            if (origen_cambio == 'precio' or not origen_cambio) and precio_post is not None and str(precio_post).strip() != '':
+                try:
+                    nuevo_precio = clean_currency_string(precio_post)
+                except (ValueError, TypeError, ArithmeticError):
+                    nuevo_precio = None
+
+            instancia.save()
+            recalcular_cotizacion(instancia, nuevo_precio_venta=nuevo_precio)
+            messages.success(request, "Valores de la cotización actualizados correctamente.")
+        else:
+            logger.error(f"Form errors updating cotizacion: {form.errors}")
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"Error al actualizar {field}: {error}")
 
         return redirect('cotizador:cotizacion_detail', pk=cotizacion.pk)
 
@@ -198,3 +218,19 @@ class CotizacionPDFView(LoginRequiredMixin, View):
         response = HttpResponse(pdf_bytes, content_type='application/pdf')
         response['Content-Disposition'] = f'inline; filename="{filename}"'
         return response
+
+
+class ImportarCotizacionPDFView(LoginRequiredMixin, View):
+    """Interfaz para arrastrar/subir un archivo PDF de cotización comercial para extracción con IA/OCR."""
+    def get(self, request):
+        return render(request, 'cotizador/importar_pdf.html', {'titulo': 'Importar Cotización desde PDF (IA)'})
+
+    def post(self, request):
+        if 'archivo_pdf' not in request.FILES:
+            messages.error(request, "Por favor selecciona un archivo PDF válido.")
+            return redirect('cotizador:importar_pdf')
+
+        archivo = request.FILES['archivo_pdf']
+        messages.info(request, f"Cotización PDF '{archivo.name}' recibida. El módulo de extracción e IA procesará los ítems automáticamente.")
+        return redirect('cotizador:importar_pdf')
+

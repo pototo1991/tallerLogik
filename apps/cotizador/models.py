@@ -57,6 +57,13 @@ class Cotizacion(TenantAwareModel):
         return timezone.now().date()
 
     @property
+    def monto_margen_estimado(self):
+        """Retorna el monto estimado de utilidad/margen comercial en pesos (Precio Venta Neto - Costo Total)."""
+        if self.precio_venta_neto and self.costo_total_estimado:
+            return max(Decimal('0.00'), self.precio_venta_neto - self.costo_total_estimado)
+        return Decimal('0.00')
+
+    @property
     def fecha_entrega_sugerida(self):
         """
         Retorna la fecha de entrega fija si se estableció manualmente.
@@ -78,24 +85,40 @@ class Cotizacion(TenantAwareModel):
     def __str__(self):
         return f"{self.numero_cotizacion} (v{self.version}) - {self.titulo_propuesta}"
 
-    def calcular_totales(self):
-        """Suma los componentes de costo y calcula el precio de venta según el margen sobre venta."""
+    def calcular_totales(self, nuevo_precio_venta=None):
+        """Suma los componentes de costo y calcula el precio de venta según el margen sobre venta, o recalcula el margen si se provee un precio."""
         self.costo_total_estimado = (
             self.costo_materiales_estimado +
             self.costo_mano_obra_estimado +
             self.costo_servicios_estimado +
             self.costo_indirecto_cif_estimado
         )
-        # Margen sobre venta: P = C / (1 - M)
-        margen = self.margen_objetivo_pct or Decimal('0.00')
-        if margen >= Decimal('100.00'):
-            margen = Decimal('99.99')
-        factor_margen = Decimal('1.00') - (margen / Decimal('100.00'))
 
-        if factor_margen > Decimal('0.00'):
-            self.precio_venta_neto = (self.costo_total_estimado / factor_margen).quantize(Decimal('0.01'))
+        if nuevo_precio_venta is not None:
+            try:
+                precio = Decimal(str(nuevo_precio_venta))
+                if precio > Decimal('0.00'):
+                    self.precio_venta_neto = precio.quantize(Decimal('0.01'))
+                    margen = ((self.precio_venta_neto - self.costo_total_estimado) / self.precio_venta_neto) * Decimal('100.00')
+                    if margen >= Decimal('100.00'):
+                        margen = Decimal('99.99')
+                    self.margen_objetivo_pct = margen.quantize(Decimal('0.01'))
+                else:
+                    self.precio_venta_neto = Decimal('0.00')
+                    self.margen_objetivo_pct = Decimal('0.00')
+            except (ValueError, TypeError, ArithmeticError):
+                pass
         else:
-            self.precio_venta_neto = self.costo_total_estimado
+            # Margen sobre venta: P = C / (1 - M)
+            margen = self.margen_objetivo_pct or Decimal('0.00')
+            if margen >= Decimal('100.00'):
+                margen = Decimal('99.99')
+            factor_margen = Decimal('1.00') - (margen / Decimal('100.00'))
+
+            if factor_margen > Decimal('0.00'):
+                self.precio_venta_neto = (self.costo_total_estimado / factor_margen).quantize(Decimal('0.01'))
+            else:
+                self.precio_venta_neto = self.costo_total_estimado
         self.save()
 
 

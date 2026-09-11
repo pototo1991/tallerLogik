@@ -3,109 +3,280 @@
 {% block title %}{{ titulo }} - TallerLogik{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto space-y-6">
-    <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-white tracking-tight">{{ titulo }}</h1>
-        <a href="{% url 'configuracion_base:clientes_list' %}" class="text-xs font-semibold text-slate-400 hover:text-white transition">
+<div class="max-w-4xl mx-auto space-y-6" x-data="clienteForm()">
+    <div class="flex items-center justify-between bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl">
+        <div>
+            <h1 class="text-2xl font-bold text-white tracking-tight">{{ titulo }}</h1>
+            <p class="text-xs text-slate-400 mt-1">Registra los datos de identificación, ubicación y contacto del cliente</p>
+        </div>
+        <a href="{% url 'configuracion_base:clientes_list' %}"
+            class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700 transition">
             &larr; Volver a Clientes
         </a>
     </div>
 
-    <div class="bg-[#0F172A] p-6 sm:p-8 rounded-2xl border border-slate-800 shadow-xl">
-        <form method="POST" class="space-y-4">
-            {% csrf_token %}
+    <form method="POST" class="bg-[#0F172A] p-6 sm:p-8 rounded-2xl border border-slate-800 shadow-xl space-y-6" novalidate>
+        {% csrf_token %}
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div class="sm:col-span-2">
-                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+        {% if form.errors %}
+        <div class="p-4 bg-red-950/80 border border-red-800 rounded-xl text-red-200 text-xs space-y-1 mb-4">
+            <div class="font-bold">Por favor corrige los siguientes errores:</div>
+            <ul class="list-disc list-inside">
+                {% for field in form %}
+                {% for error in field.errors %}
+                <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                {% endfor %}
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- Sección 1: Datos de Identificación -->
+        <div class="space-y-4">
+            <h3 class="text-sm font-bold text-sky-400 uppercase tracking-wider border-b border-slate-800 pb-2">
+                🏢 Datos de Identificación
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">
                         Razón Social / Nombre Completo *
                     </label>
                     {{ form.razon_social }}
-                    {% if form.razon_social.errors %}<p class="text-xs text-red-400 mt-1">{{ form.razon_social.errors.0 }}</p>{% endif %}
+                    {% if form.razon_social.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.razon_social.errors.0 }}</p>{% endif %}
                 </div>
-
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                        RUT / Identificación Fiscal (12345678-9)
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">
+                        RUT
                     </label>
                     {{ form.rut_o_identificacion }}
-                    {% if form.rut_o_identificacion.errors %}<p class="text-xs text-red-400 mt-1 font-medium">{{ form.rut_o_identificacion.errors.0 }}</p>{% endif %}
+                    <div class="mt-1 flex items-center justify-between text-xs">
+                        <span x-text="mensajeRut" :class="{
+                            'text-emerald-400 font-semibold': rutValido === true,
+                            'text-red-400 font-semibold': rutValido === false,
+                            'text-slate-400': rutValido === null
+                        }"></span>
+                    </div>
+                    {% if form.rut_o_identificacion.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.rut_o_identificacion.errors.0 }}</p>{% endif %}
                 </div>
+            </div>
+        </div>
 
-                <div>
-                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                        Persona de Contacto *
-                    </label>
-                    {{ form.nombre_contacto }}
-                    {% if form.nombre_contacto.errors %}<p class="text-xs text-red-400 mt-1 font-medium">{{ form.nombre_contacto.errors.0 }}</p>{% endif %}
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                        Correo Contacto
-                    </label>
-                    {{ form.correo_contacto }}
-                    {% if form.correo_contacto.errors %}<p class="text-xs text-red-400 mt-1 font-medium">{{ form.correo_contacto.errors.0 }}</p>{% endif %}
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                        Teléfono Contacto
-                    </label>
-                    {{ form.telefono_contacto }}
-                    {% if form.telefono_contacto.errors %}<p class="text-xs text-red-400 mt-1 font-medium">{{ form.telefono_contacto.errors.0 }}</p>{% endif %}
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                        Correo Facturación / General
-                    </label>
-                    {{ form.correo_general }}
-                    {% if form.correo_general.errors %}<p class="text-xs text-red-400 mt-1 font-medium">{{ form.correo_general.errors.0 }}</p>{% endif %}
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                        Teléfono General
-                    </label>
-                    {{ form.telefono_general }}
-                    {% if form.telefono_general.errors %}<p class="text-xs text-red-400 mt-1 font-medium">{{ form.telefono_general.errors.0 }}</p>{% endif %}
-                </div>
-
-                <div class="sm:col-span-2">
-                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+        <!-- Sección 2: Dirección y Ubicación -->
+        <div class="space-y-4">
+            <h3 class="text-sm font-bold text-sky-400 uppercase tracking-wider border-b border-slate-800 pb-2">
+                📍 Dirección y Ubicación
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="md:col-span-1">
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">
                         Dirección
                     </label>
                     {{ form.direccion }}
-                    {% if form.direccion.errors %}<p class="text-xs text-red-400 mt-1 font-medium">{{ form.direccion.errors.0 }}</p>{% endif %}
+                    {% if form.direccion.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.direccion.errors.0 }}</p>{% endif %}
                 </div>
-
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">
                         Comuna
                     </label>
                     {{ form.comuna }}
-                    {% if form.comuna.errors %}<p class="text-xs text-red-400 mt-1 font-medium">{{ form.comuna.errors.0 }}</p>{% endif %}
+                    {% if form.comuna.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.comuna.errors.0 }}</p>{% endif %}
                 </div>
-
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">
                         Ciudad
                     </label>
                     {{ form.ciudad }}
-                    {% if form.ciudad.errors %}<p class="text-xs text-red-400 mt-1 font-medium">{{ form.ciudad.errors.0 }}</p>{% endif %}
+                    {% if form.ciudad.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.ciudad.errors.0 }}</p>{% endif %}
                 </div>
             </div>
+        </div>
 
-            <div class="pt-6 flex justify-end space-x-3">
-                <a href="{% url 'configuracion_base:clientes_list' %}" class="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 transition">
-                    Cancelar
-                </a>
-                <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-semibold text-white bg-[#0284C7] hover:bg-sky-500 transition shadow-lg shadow-sky-500/20">
-                    Guardar Cliente
-                </button>
+        <!-- Sección 3: Contacto & Facturación -->
+        <div class="space-y-4">
+            <h3 class="text-sm font-bold text-sky-400 uppercase tracking-wider border-b border-slate-800 pb-2">
+                📞 Persona de Contacto & Facturación
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">
+                        Persona de Contacto *
+                    </label>
+                    {{ form.nombre_contacto }}
+                    {% if form.nombre_contacto.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.nombre_contacto.errors.0 }}</p>{% endif %}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">
+                        Teléfono Contacto
+                    </label>
+                    {{ form.telefono_contacto }}
+                    {% if form.telefono_contacto.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.telefono_contacto.errors.0 }}</p>{% endif %}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">
+                        Correo Contacto
+                    </label>
+                    {{ form.correo_contacto }}
+                    <div class="mt-1 flex items-center justify-between text-xs">
+                        <span x-text="mensajeCorreoContacto" :class="{
+                            'text-emerald-400 font-semibold': correoContactoValido === true,
+                            'text-red-400 font-semibold': correoContactoValido === false,
+                            'text-slate-400': correoContactoValido === null
+                        }"></span>
+                    </div>
+                    {% if form.correo_contacto.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.correo_contacto.errors.0 }}</p>{% endif %}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">
+                        Teléfono Empresa / General
+                    </label>
+                    {{ form.telefono_general }}
+                    {% if form.telefono_general.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.telefono_general.errors.0 }}</p>{% endif %}
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">
+                        Correo Facturación / General
+                    </label>
+                    {{ form.correo_general }}
+                    <div class="mt-1 flex items-center justify-between text-xs">
+                        <span x-text="mensajeCorreoGeneral" :class="{
+                            'text-emerald-400 font-semibold': correoGeneralValido === true,
+                            'text-red-400 font-semibold': correoGeneralValido === false,
+                            'text-slate-400': correoGeneralValido === null
+                        }"></span>
+                    </div>
+                    {% if form.correo_general.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.correo_general.errors.0 }}</p>{% endif %}
+                </div>
             </div>
-        </form>
-    </div>
+        </div>
+
+        <!-- Botones -->
+        <div class="flex justify-end space-x-3 pt-4 border-t border-slate-800">
+            <a href="{% url 'configuracion_base:clientes_list' %}"
+                class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700 transition">
+                Cancelar
+            </a>
+            <button type="submit"
+                class="px-6 py-2.5 bg-[#0284C7] hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-sky-500/20">
+                Guardar Cliente
+            </button>
+        </div>
+    </form>
 </div>
+
+<script>
+    function clienteForm() {
+        return {
+            rut: '{{ form.rut_o_identificacion.value|default:"" }}',
+            rutValido: null,
+            mensajeRut: '',
+            correoContacto: '{{ form.correo_contacto.value|default:"" }}',
+            correoContactoValido: null,
+            mensajeCorreoContacto: '',
+            correoGeneral: '{{ form.correo_general.value|default:"" }}',
+            correoGeneralValido: null,
+            mensajeCorreoGeneral: '',
+
+            init() {
+                if (this.rut) this.formatRut();
+                if (this.correoContacto) this.validarCorreoContacto();
+                if (this.correoGeneral) this.validarCorreoGeneral();
+            },
+
+            formatRut() {
+                let clean = this.rut.replace(/[^0-9kK]/g, '').toUpperCase();
+                if (clean.length > 9) clean = clean.slice(0, 9);
+
+                if (clean.length > 1) {
+                    const cuerpo = clean.slice(0, -1);
+                    const dv = clean.slice(-1);
+                    this.rut = cuerpo + '-' + dv;
+                } else {
+                    this.rut = clean;
+                }
+
+                this.validarRut();
+            },
+
+            validarRut() {
+                const clean = this.rut.replace(/[^0-9kK]/g, '').toUpperCase();
+                if (!clean) {
+                    this.rutValido = null;
+                    this.mensajeRut = '';
+                    return;
+                }
+
+                if (clean.length < 8 || clean.length > 9) {
+                    this.rutValido = false;
+                    this.mensajeRut = '❌ El RUT debe tener el formato 12345678-9 (sin puntos y con guion).';
+                    return;
+                }
+
+                const cuerpo = clean.slice(0, -1);
+                const dv = clean.slice(-1);
+
+                if (!/^\d+$/.test(cuerpo)) {
+                    this.rutValido = false;
+                    this.mensajeRut = '❌ El RUT contiene caracteres no numéricos.';
+                    return;
+                }
+
+                let suma = 0;
+                let mult = 2;
+                for (let i = cuerpo.length - 1; i >= 0; i--) {
+                    suma += parseInt(cuerpo.charAt(i)) * mult;
+                    mult = mult === 7 ? 2 : mult + 1;
+                }
+
+                const resto = suma % 11;
+                const diff = 11 - resto;
+                let dvEsperado = '';
+                if (diff === 11) dvEsperado = '0';
+                else if (diff === 10) dvEsperado = 'K';
+                else dvEsperado = String(diff);
+
+                if (dv === dvEsperado) {
+                    this.rutValido = true;
+                    this.mensajeRut = '✓ RUT válido (Módulo 11 verificado)';
+                } else {
+                    this.rutValido = false;
+                    this.mensajeRut = '❌ El dígito verificador del RUT no es válido según el algoritmo Módulo 11.';
+                }
+            },
+
+            validarCorreoContacto() {
+                if (!this.correoContacto || !this.correoContacto.trim()) {
+                    this.correoContactoValido = null;
+                    this.mensajeCorreoContacto = '';
+                    return;
+                }
+
+                const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (regexEmail.test(this.correoContacto.trim())) {
+                    this.correoContactoValido = true;
+                    this.mensajeCorreoContacto = '✓ Correo válido';
+                } else {
+                    this.correoContactoValido = false;
+                    this.mensajeCorreoContacto = '❌ El correo debe tener el formato usuario@dominio.com';
+                }
+            },
+
+            validarCorreoGeneral() {
+                if (!this.correoGeneral || !this.correoGeneral.trim()) {
+                    this.correoGeneralValido = null;
+                    this.mensajeCorreoGeneral = '';
+                    return;
+                }
+
+                const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (regexEmail.test(this.correoGeneral.trim())) {
+                    this.correoGeneralValido = true;
+                    this.mensajeCorreoGeneral = '✓ Correo válido';
+                } else {
+                    this.correoGeneralValido = false;
+                    this.mensajeCorreoGeneral = '❌ El correo debe tener el formato usuario@dominio.com';
+                }
+            }
+        }
+    }
+</script>
 {% endblock %}

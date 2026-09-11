@@ -1,16 +1,16 @@
 {% extends 'base.html' %}
 
-{% block title %}Imputar Horas MOD - TallerLogik{% endblock %}
+{% block title %}{{ titulo }} - TallerLogik{% endblock %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto space-y-6">
     <div class="flex items-center justify-between bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl">
         <div>
-            <h1 class="text-2xl font-bold text-white tracking-tight">Imputar Horas de Taller (MOD)</h1>
-            <p class="text-xs text-slate-400 mt-1">Registro manual de horas trabajadas por operario y etapa productiva para costeo de mano de obra directa</p>
+            <h1 class="text-2xl font-bold text-white tracking-tight">{{ titulo }}</h1>
+            <p class="text-xs text-slate-400 mt-1">Registra y gestiona las cuentas bancarias de la empresa para transferencias y pagos</p>
         </div>
-        <a href="{% url 'compras_gastos:tiempos_list' %}" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700 transition">
-            &larr; Ver Historial
+        <a href="{% url 'configuracion_base:bancos_list' %}" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700 transition">
+            &larr; Volver a Bancos
         </a>
     </div>
 
@@ -31,59 +31,66 @@
             </div>
             {% endif %}
 
-            <!-- Sección 1: Operario & Orden de Trabajo -->
+            <!-- Sección 1: Identificación de la Institución Bancaria -->
             <div class="space-y-4">
                 <h3 class="text-sm font-bold text-sky-400 uppercase tracking-wider border-b border-slate-800 pb-2">
-                    👤 Operario & Orden de Trabajo
+                    🏦 Identificación de la Institución Bancaria
                 </h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-semibold text-slate-300 mb-1">
-                            Orden de Trabajo (OT) *
+                            Nombre del Banco *
                         </label>
-                        {{ form.id_proyecto }}
-                        {% if form.id_proyecto.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.id_proyecto.errors.0 }}</p>{% endif %}
+                        {{ form.nombre_banco }}
+                        {% if form.nombre_banco.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.nombre_banco.errors.0 }}</p>{% endif %}
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-300 mb-1">
-                            Operario / Miembro del Equipo *
+                            Código SBIF / Identificador
                         </label>
-                        {{ form.id_usuario }}
-                        {% if form.id_usuario.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.id_usuario.errors.0 }}</p>{% endif %}
+                        {{ form.codigo_sbif }}
+                        {% if form.codigo_sbif.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.codigo_sbif.errors.0 }}</p>{% endif %}
                     </div>
                 </div>
             </div>
 
-            <!-- Sección 2: Etapa Productiva & Horas -->
+            <!-- Sección 2: Cuenta & Estado Operativo -->
             <div class="space-y-4">
                 <h3 class="text-sm font-bold text-sky-400 uppercase tracking-wider border-b border-slate-800 pb-2">
-                    ⏱️ Etapa Productiva & Registro de Horas
+                    💳 Cuenta & Estado Operativo
                 </h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-semibold text-slate-300 mb-1">
-                            Etapa Productiva *
+                            Tipo de Cuenta *
                         </label>
-                        {{ form.etapa }}
-                        {% if form.etapa.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.etapa.errors.0 }}</p>{% endif %}
+                        {{ form.tipo_cuenta }}
+                        {% if form.tipo_cuenta.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.tipo_cuenta.errors.0 }}</p>{% endif %}
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-300 mb-1">
-                            Horas Trabajadas (Ej. 4.5 hrs) *
+                            N° de Cuenta Corriente / Vista *
                         </label>
-                        {{ form.horas_trabajadas }}
-                        {% if form.horas_trabajadas.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.horas_trabajadas.errors.0 }}</p>{% endif %}
+                        {{ form.numero_cuenta }}
+                        {% if form.numero_cuenta.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.numero_cuenta.errors.0 }}</p>{% endif %}
                     </div>
+                </div>
+
+                <div class="flex items-center space-x-2 pt-2">
+                    {{ form.activo }}
+                    <label for="{{ form.activo.id_for_label }}" class="text-xs text-slate-300 font-medium cursor-pointer">
+                        Banco Activo para Operaciones de Transferencias
+                    </label>
                 </div>
             </div>
 
             <!-- Botones -->
             <div class="flex justify-end space-x-3 pt-4 border-t border-slate-800">
-                <a href="{% url 'compras_gastos:tiempos_list' %}" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700 transition">
+                <a href="{% url 'configuracion_base:bancos_list' %}" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700 transition">
                     Cancelar
                 </a>
                 <button type="submit" class="px-6 py-2.5 bg-[#0284C7] hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-sky-500/20">
-                    Guardar Imputación de Horas
+                    Guardar Banco
                 </button>
             </div>
         </form>

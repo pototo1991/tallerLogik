@@ -1,3 +1,4 @@
+import json
 import logging
 from decimal import Decimal
 from django.shortcuts import render, get_object_or_404, redirect
@@ -121,11 +122,21 @@ class ProyectoDetailView(LoginRequiredMixin, View):
         rectificacion_form = ItemProyectoRectificacionForm(empresa=request.tenant)
         proyecto_form = ProyectoForm(instance=proyecto)
 
+        materiales = Material.objects.filter(id_empresa=request.tenant)
+        materiales_dict = {
+            str(m.id): {
+                'id': str(m.id),
+                'costo': float(m.costo_unitario),
+                'nombre': m.nombre
+            } for m in materiales
+        }
+
         context = {
             'proyecto': proyecto,
             'items_bom': items_bom,
             'rectificacion_form': rectificacion_form,
             'proyecto_form': proyecto_form,
+            'materiales_json': json.dumps(materiales_dict),
         }
         return render(request, 'ordenes_trabajo/proyecto_detail.html', context)
 
@@ -201,19 +212,23 @@ class ProyectoItemsAPIView(LoginRequiredMixin, View):
     def get(self, request, proyecto_id):
         from django.http import JsonResponse
         proyecto = get_object_or_404(Proyecto, id=proyecto_id, id_empresa=request.tenant)
-        items = proyecto.items_produccion.exclude(tipo_item='Mano_Obra').select_related('id_material')
+        items_qs = proyecto.items_produccion.exclude(tipo_item='Mano_Obra').select_related('id_material')
+        
+        items_list = list(items_qs)
+        if not items_list and proyecto.id_cotizacion_origen:
+            items_list = list(proyecto.id_cotizacion_origen.items.exclude(tipo_item='Mano_Obra').select_related('id_material'))
         
         data = {
             'items': [
                 {
                     'id': str(item.id),
                     'descripcion': item.descripcion,
-                    'tipo_item': item.tipo_item,
+                    'tipo_item': getattr(item, 'tipo_item', 'Material'),
                     'costo_unitario': float(item.costo_unitario),
                     'cantidad': float(item.cantidad),
                     'subtotal_costo': float(item.subtotal_costo),
                 }
-                for item in items
+                for item in items_list
             ]
         }
         return JsonResponse(data)

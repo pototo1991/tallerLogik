@@ -9,7 +9,7 @@
     <!-- Header & Acciones Principales -->
     <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-            <div class="flex items-center space-x-3">
+            <div class="flex flex-wrap items-center gap-3">
                 <h1 class="text-2xl font-bold text-white tracking-tight">{{ cotizacion.numero_cotizacion }}</h1>
                 <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-950 text-sky-400 border border-sky-800">
                     Versión {{ cotizacion.version }}
@@ -21,7 +21,7 @@
                 </span>
             </div>
             <p class="text-sm text-slate-300 font-semibold mt-1">{{ cotizacion.titulo_propuesta }}</p>
-            <p class="text-xs text-slate-400">
+            <p class="text-xs text-slate-400 mt-1">
                 Cliente: <strong class="text-white">{{ cotizacion.id_cliente.razon_social }}</strong> | 
                 Validez: {{ cotizacion.dias_validez }} días | 
                 Fecha Entrega: <strong class="text-emerald-400">{{ cotizacion.fecha_entrega_sugerida|date:"d/m/Y" }}</strong>
@@ -35,6 +35,10 @@
 
         <!-- Botones de Acción -->
         <div class="flex flex-wrap items-center gap-2">
+            <a href="{% url 'cotizador:cotizaciones_list' %}" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition">
+                &larr; Volver
+            </a>
+
             <!-- Ver / Descargar PDF WeasyPrint -->
             <a href="{% url 'cotizador:cotizacion_pdf' cotizacion.pk %}" target="_blank" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-amber-300 bg-amber-950/80 hover:bg-amber-900 border border-amber-800 transition">
                 📄 Exportar PDF
@@ -64,43 +68,91 @@
         </div>
     </div>
 
-    <!-- Modificación de Parámetros de Cabecera (Margen, CIF, Fechas, Notas) -->
-    <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl" x-data="{ open: false }">
+    <!-- Modificación de Parámetros de Cabecera (Margen, Precio Venta Neto, CIF, Fechas, Notas) -->
+    <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl"
+         x-data="quoteHeaderData('{{ cotizacion.costo_total_estimado|stringformat:".2f" }}', '{{ cotizacion.margen_objetivo_pct|stringformat:".2f" }}', '{{ cotizacion.precio_venta_neto|stringformat:".2f" }}')">
         <div class="flex items-center justify-between cursor-pointer" @click="open = !open">
-            <h3 class="text-sm font-bold text-slate-300">Ajustar Margen Objetivo, CIF, Fechas de Entrega y Condiciones Comercial</h3>
-            <span class="text-xs text-sky-400 font-semibold" x-text="open ? '[-] Ocultar Ajustes' : '[+] Modificar Margen/CIF/Fechas'"></span>
+            <h3 class="text-sm font-bold text-sky-400 uppercase tracking-wider flex items-center gap-2">
+                <span>⚙️ Ajustar Margen Objetivo, Precio Venta Neto & CIF</span>
+                <span class="text-[10px] bg-sky-950 text-sky-300 px-2 py-0.5 rounded-full border border-sky-800 font-normal">Monto Editable</span>
+            </h3>
+            <span class="text-xs text-sky-400 font-semibold" x-text="open ? '[-] Ocultar Ajustes' : '[+] Modificar Margen / Precio / CIF'"></span>
         </div>
         <form method="POST" x-show="open" x-cloak class="mt-4 pt-4 border-t border-slate-800 space-y-4">
             {% csrf_token %}
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Margen Objetivo (%)</label>
-                    {{ header_form.margen_objetivo_pct }}
+            
+            <!-- Campos Ocultos de Sincronización para Backend -->
+            <input type="hidden" name="origen_cambio" :value="origenCambio">
+            <input type="hidden" name="precio_venta_neto_clean" :value="precioVenta">
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+                
+                <!-- 1. PRECIO VENTA NETO EDITABLE ($) -->
+                <div class="sm:col-span-2 lg:col-span-2 bg-sky-950/40 p-3 rounded-xl border border-sky-800/80 shadow-lg shadow-sky-950/20">
+                    <label class="block text-xs font-bold text-sky-300 mb-1 flex items-center justify-between">
+                        <span>💵 Precio Venta Neto ($)</span>
+                        <span class="text-[10px] text-sky-400 font-normal">(Editable)</span>
+                    </label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-sky-400 font-mono font-bold text-base">$</span>
+                        <input type="text"
+                               x-model="precioVentaDisplay"
+                               @input="formatPrecioVentaInput($event)"
+                               class="w-full pl-8 pr-4 py-2 bg-slate-800 border border-sky-600/80 rounded-lg text-sky-300 font-mono font-extrabold text-lg focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400"
+                               placeholder="0">
+                    </div>
+                    <div class="text-[10px] text-sky-300/90 mt-1.5 flex items-center justify-between font-mono font-medium">
+                        <span>Utilidad: <strong class="text-teal-400 font-bold" x-text="montoMargenFormatted">$0</strong></span>
+                        <span>Margen: <strong class="text-emerald-400 font-bold" x-text="margenPct + '%'">0%</strong></span>
+                    </div>
                 </div>
+
+                <!-- 2. MARGEN OBJETIVO (%) EDITABLE -->
                 <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Costo Indirecto CIF ($)</label>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Margen Objetivo (%)</label>
+                    <input type="number"
+                           step="0.01"
+                           name="margen_objetivo_pct"
+                           x-model.number="margenPct"
+                           @input="onMargenPctInput()"
+                           class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-emerald-400 font-mono font-bold focus:outline-none focus:border-sky-500 text-sm"
+                           placeholder="35.00">
+                </div>
+
+                <!-- 3. COSTO INDIRECTO CIF ($) -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Costo Indirecto CIF ($)</label>
                     {{ header_form.costo_indirecto_cif_estimado }}
                 </div>
+
+                <!-- 4. DÍAS DE VALIDEZ -->
                 <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Días de Validez</label>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Días de Validez</label>
                     {{ header_form.dias_validez }}
                 </div>
+
+                <!-- 5. INICIO ESTIMADO -->
                 <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Inicio Estimado</label>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Inicio Estimado</label>
                     {{ header_form.fecha_inicio_estimada }}
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Entrega Fija (Opcional)</label>
+
+                <!-- 6. ENTREGA FIJA (OPCIONAL) -->
+                <div class="sm:col-span-2 lg:col-span-2">
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Entrega Fija / Prometida (Opcional)</label>
                     {{ header_form.fecha_entrega_manual }}
                 </div>
-                <div class="sm:col-span-2 lg:col-span-5">
-                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Notas y Condiciones</label>
+
+                <!-- 7. NOTAS Y CONDICIONES -->
+                <div class="sm:col-span-2 lg:col-span-4">
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Notas y Condiciones Comerciales</label>
                     {{ header_form.notas_condiciones }}
                 </div>
             </div>
-            <div class="flex justify-end">
-                <button type="submit" class="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-[#0284C7] hover:bg-sky-500 transition">
-                    Actualizar Cotización
+
+            <div class="flex justify-end pt-2">
+                <button type="submit" class="px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-[#0284C7] hover:bg-sky-500 transition shadow-lg shadow-sky-500/20 flex items-center space-x-1.5">
+                    <span>💾 Guardar Cambios de Cotización</span>
                 </button>
             </div>
         </form>
@@ -115,7 +167,7 @@
          @htmx:after-request="if ($event.detail.successful) resetForm()">
         
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-800">
-            <h3 class="text-base font-bold text-white">+ Agregar Ítem al Presupuesto Comercial</h3>
+            <h3 class="text-sm font-bold text-sky-400 uppercase tracking-wider">+ Agregar Ítem al Presupuesto Comercial</h3>
             
             <!-- Selector de Tipo de Ítem (Tabs) -->
             <div class="flex items-center p-1 bg-slate-900 rounded-xl border border-slate-800 self-start sm:self-auto">
@@ -154,31 +206,116 @@
 
             <!-- 1. VISTA: MATERIAL DEL CATÁLOGO -->
             <div x-show="tipoItem === 'Material'" class="grid grid-cols-1 sm:grid-cols-12 gap-4">
-                <div class="sm:col-span-6 lg:col-span-3">
-                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Material del Catálogo</label>
-                    {{ item_form.id_material }}
+                <!-- Combobox Buscable Interactivo Alpine.js -->
+                <div class="sm:col-span-6 lg:col-span-3 relative" @click.away="openMaterialDropdown = false">
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">
+                        Material del Catálogo <span class="text-[10px] text-sky-400 font-normal">(Filtro instantáneo)</span>
+                    </label>
+
+                    <!-- Campo Oculto para envío POST en Django Form -->
+                    <input type="hidden" name="id_material" :value="selectedMaterial">
+
+                    <!-- Input de Búsqueda Interactiva -->
+                    <div class="relative flex items-center">
+                        <input type="text"
+                               x-model="materialSearchQuery"
+                               @focus="openMaterialDropdown = true"
+                               @input="openMaterialDropdown = true; highlightedIndex = 0"
+                               @keydown.arrow-down.prevent="openMaterialDropdown = true; navigateMaterialDown()"
+                               @keydown.arrow-up.prevent="navigateMaterialUp()"
+                               @keydown.enter.prevent="if (openMaterialDropdown && filteredMateriales.length > 0) { selectHighlightedMaterial(); } else { $el.closest('form').requestSubmit(); }"
+                               @keydown.escape="openMaterialDropdown = false"
+                               placeholder="🔍 Buscar por nombre, categoría o SKU..."
+                               class="w-full pl-8 pr-7 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-xs placeholder-slate-400 focus:outline-none focus:border-sky-500 font-medium">
+                        
+                        <!-- Icono Lupa Left -->
+                        <span class="absolute left-2.5 text-slate-400 text-xs pointer-events-none">🔍</span>
+
+                        <!-- Botón Limpiar Right -->
+                        <button type="button" 
+                                x-show="materialSearchQuery || selectedMaterial" 
+                                @click="clearMaterialSelection()"
+                                class="absolute right-2 text-slate-400 hover:text-white text-xs p-1">
+                            ✕
+                        </button>
+                    </div>
+
+                    <!-- Dropdown flotante con resultados filtrados -->
+                    <div x-show="openMaterialDropdown" 
+                         x-cloak 
+                         x-transition
+                         class="absolute z-50 left-0 right-0 mt-1 bg-[#0F172A] border border-slate-700 rounded-xl shadow-2xl max-h-64 overflow-y-auto divide-y divide-slate-800/60">
+                        
+                        <!-- Header contador del Dropdown -->
+                        <div class="px-3 py-1.5 bg-slate-900/90 text-[10px] font-semibold text-slate-400 flex items-center justify-between sticky top-0 backdrop-blur z-10 border-b border-slate-800">
+                            <span>Coincidencias: <strong class="text-sky-400" x-text="filteredMateriales.length"></strong></span>
+                            <span class="text-[10px] text-slate-500" x-show="Object.keys(materialesMap).length > 50">Top 50 mostrados</span>
+                        </div>
+
+                        <!-- Lista de Opciones -->
+                        <template x-for="(mat, index) in filteredMateriales" :key="mat.id">
+                            <div @click="selectMaterial(mat)"
+                                 @mouseenter="highlightedIndex = index"
+                                 :class="{
+                                    'bg-sky-600/30 text-white border-l-2 border-sky-400': highlightedIndex === index,
+                                    'hover:bg-slate-800/80 text-slate-200': highlightedIndex !== index,
+                                    'bg-sky-950/60': selectedMaterial === mat.id
+                                 }"
+                                 class="px-3 py-2 cursor-pointer transition flex flex-col gap-0.5 text-xs">
+                                
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="font-medium text-white truncate" x-text="mat.nombre"></span>
+                                    <span class="font-mono font-bold text-amber-400 shrink-0" x-text="'$' + Math.round(mat.costo).toLocaleString('es-CL')"></span>
+                                </div>
+
+                                <div class="flex items-center justify-between text-[10px] text-slate-400">
+                                    <div class="flex items-center gap-1.5">
+                                        <span x-show="mat.categoria" class="px-1 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700" x-text="mat.categoria"></span>
+                                        <span x-show="mat.unidad_medida" class="text-slate-400" x-text="mat.unidad_medida"></span>
+                                    </div>
+                                    <span x-show="mat.sku" class="font-mono text-sky-400" x-text="'SKU: ' + mat.sku"></span>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Estado Sin Resultados -->
+                        <div x-show="filteredMateriales.length === 0" class="px-4 py-5 text-center text-slate-400 text-xs">
+                            <p class="font-semibold text-slate-300">No se encontraron productos</p>
+                            <p class="text-[10px] text-slate-500 mt-0.5">Intenta buscar con otra palabra clave o código</p>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="sm:col-span-6 lg:col-span-3">
-                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Valor por Unidad ($) *</label>
-                    <input type="number" step="0.01" x-model.number="costoMat" @input="syncMaterial()" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono focus:outline-none focus:border-sky-500" placeholder="0.00">
+                    <label class="block text-xs font-semibold text-slate-300 mb-1 flex items-center justify-between">
+                        <span>Valor por Unidad ($) *</span>
+                        <span x-show="costoMatFormatted" x-cloak class="font-mono text-amber-400 font-bold bg-amber-950/80 px-2 py-0.5 rounded border border-amber-800/60 text-[11px]" x-text="costoMatFormatted"></span>
+                    </label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 font-mono font-bold text-sm">$</span>
+                        <input type="text"
+                               x-model="costoMatDisplay"
+                               @input="formatCostoMat($event)"
+                               class="w-full pl-7 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono focus:outline-none focus:border-sky-500"
+                               placeholder="0">
+                    </div>
                 </div>
 
                 <div class="sm:col-span-6 lg:col-span-3">
-                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Cantidad *</label>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Cantidad *</label>
                     <input type="number" step="0.01" x-model.number="cantidadMat" @input="syncMaterial()" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono focus:outline-none focus:border-sky-500" placeholder="1">
                 </div>
 
                 <div class="sm:col-span-6 lg:col-span-3">
-                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Monto Total Material ($)</label>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Monto Total Material ($)</label>
                     <div class="px-4 py-2 bg-slate-900 border border-slate-700/80 rounded-lg text-amber-400 font-mono font-bold text-base shadow-inner flex items-center justify-between h-[42px]">
                         <span>$</span>
-                        <span x-text="montoTotalFormatted">0,00</span>
+                        <span x-text="montoTotalFormatted">0</span>
                     </div>
                 </div>
 
                 <div class="sm:col-span-8 lg:col-span-9">
-                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Descripción Personalizada *</label>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Descripción Personalizada *</label>
                     <input type="text" x-model="descripcionMat" @input="syncMaterial()" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500" placeholder="Descripción del insumo o material">
                 </div>
 
@@ -195,7 +332,7 @@
                     <div class="grid grid-cols-1 sm:grid-cols-12 gap-4">
                         <!-- Trabajador / Operario Registrado en Aplicativo -->
                         <div class="sm:col-span-6 lg:col-span-4">
-                            <label class="block text-xs font-semibold text-indigo-300 uppercase mb-1">Trabajador / Operario</label>
+                            <label class="block text-xs font-semibold text-indigo-300 mb-1">Trabajador / Operario</label>
                             <select x-model="selectedRol" @change="onRolChange()" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 text-sm">
                                 {% for op in operarios_lista %}
                                 <option value="user:{{ op.id }}">{{ op.nombre_completo }} ({{ op.get_rol_display }}) - {{ op.costo_hora|clp }}/hr</option>
@@ -207,26 +344,36 @@
 
                         <!-- Días Hábiles Estimados -->
                         <div class="sm:col-span-6 lg:col-span-2">
-                            <label class="block text-xs font-semibold text-indigo-300 uppercase mb-1">Días Hábiles</label>
+                            <label class="block text-xs font-semibold text-indigo-300 mb-1">Días Hábiles</label>
                             <input type="number" step="0.5" min="0.5" x-model.number="diasHabiles" @input="recalcularMo()" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono focus:outline-none focus:border-indigo-500">
                         </div>
 
                         <!-- Cantidad de Personas -->
                         <div class="sm:col-span-6 lg:col-span-2">
-                            <label class="block text-xs font-semibold text-indigo-300 uppercase mb-1">N° Trabajadores</label>
+                            <label class="block text-xs font-semibold text-indigo-300 mb-1">N° Trabajadores</label>
                             <input type="number" step="1" min="1" x-model.number="cantidadPersonas" @input="recalcularMo()" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono focus:outline-none focus:border-indigo-500">
                         </div>
 
                         <!-- Horas por Día -->
                         <div class="sm:col-span-6 lg:col-span-2">
-                            <label class="block text-xs font-semibold text-indigo-300 uppercase mb-1">Horas / Día</label>
+                            <label class="block text-xs font-semibold text-indigo-300 mb-1">Horas / Día</label>
                             <input type="number" step="1" min="1" max="24" x-model.number="horasPorDia" @input="recalcularMo()" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono focus:outline-none focus:border-indigo-500">
                         </div>
 
                         <!-- Costo por Hora ($) -->
                         <div class="sm:col-span-6 lg:col-span-2">
-                            <label class="block text-xs font-semibold text-indigo-300 uppercase mb-1">Tarifa Hora ($)</label>
-                            <input type="number" step="0.01" x-model.number="costoHora" @input="recalcularMo()" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono focus:outline-none focus:border-indigo-500">
+                            <label class="block text-xs font-semibold text-indigo-300 mb-1 flex items-center justify-between">
+                                <span>Tarifa Hora ($)</span>
+                                <span x-show="costoHoraFormatted" x-cloak class="font-mono text-indigo-300 font-bold bg-indigo-950/80 px-2 py-0.5 rounded border border-indigo-800/60 text-[11px]" x-text="costoHoraFormatted"></span>
+                            </label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-indigo-400 font-mono font-bold text-sm">$</span>
+                                <input type="text"
+                                       x-model="costoHoraDisplay"
+                                       @input="formatCostoHora($event)"
+                                       class="w-full pl-7 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono focus:outline-none focus:border-indigo-500"
+                                       placeholder="0">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -234,12 +381,12 @@
                 <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
                     <!-- Resumen Reactivo de Horas e Importe Totales -->
                     <div class="sm:col-span-8 lg:col-span-9">
-                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Detalle / Descripción para Presupuesto</label>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Detalle / Descripción para Presupuesto</label>
                         <input type="text" x-model="descripcionMo" @input="syncMoManualDesc()" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-indigo-500">
                         <div class="mt-1.5 flex items-center space-x-3 text-xs text-indigo-300">
                             <span>⏱ Total Horas: <strong class="font-mono text-white" x-text="horasTotalesMo">0</strong> hrs</span>
                             <span>•</span>
-                            <span>💰 Subtotal MOD Estimado: <strong class="font-mono text-emerald-400 text-sm" x-text="'$' + montoTotalMoFormatted">0,00</strong></span>
+                            <span>💰 Subtotal MOD Estimado: <strong class="font-mono text-emerald-400 text-sm" x-text="'$' + montoTotalMoFormatted">0</strong></span>
                         </div>
                     </div>
 
@@ -255,13 +402,23 @@
             <!-- 3. VISTA: SERVICIO TERCERO -->
             <div x-show="tipoItem === 'Servicio_Tercero'" x-cloak class="grid grid-cols-1 sm:grid-cols-12 gap-4">
                 <div class="sm:col-span-8 lg:col-span-6">
-                    <label class="block text-xs font-semibold text-emerald-300 uppercase mb-1">Descripción del Servicio Tercero</label>
+                    <label class="block text-xs font-semibold text-emerald-300 mb-1">Descripción del Servicio Tercero</label>
                     <input type="text" x-model="descripcionServicio" @input="syncServicio()" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-emerald-500" placeholder="Ej. Laqueado poliuretano exterior, Flete y transporte...">
                 </div>
 
                 <div class="sm:col-span-4 lg:col-span-3">
-                    <label class="block text-xs font-semibold text-emerald-300 uppercase mb-1">Costo ($)</label>
-                    <input type="number" step="0.01" x-model.number="costoServicio" @input="syncServicio()" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono focus:outline-none focus:border-emerald-500" placeholder="0.00">
+                    <label class="block text-xs font-semibold text-emerald-300 mb-1 flex items-center justify-between">
+                        <span>Costo ($) *</span>
+                        <span x-show="costoServicioFormatted" x-cloak class="font-mono text-emerald-400 font-bold bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800/60 text-[11px]" x-text="costoServicioFormatted"></span>
+                    </label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-emerald-400 font-mono font-bold text-sm">$</span>
+                        <input type="text"
+                               x-model="costoServicioDisplay"
+                               @input="formatCostoServicio($event)"
+                               class="w-full pl-7 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono focus:outline-none focus:border-emerald-500"
+                               placeholder="0">
+                    </div>
                 </div>
 
                 <div class="sm:col-span-12 lg:col-span-3 flex items-end">
@@ -274,6 +431,66 @@
     </div>
 
     <script>
+        function quoteHeaderData(costoTotalInit, margenPctInit, precioVentaInit) {
+            return {
+                open: true,
+                costoTotal: parseFloat(costoTotalInit) || 0,
+                margenPct: parseFloat(margenPctInit) || 0,
+                precioVenta: parseFloat(precioVentaInit) || 0,
+                precioVentaDisplay: Math.round(parseFloat(precioVentaInit) || 0).toLocaleString('es-CL'),
+                origenCambio: 'margen',
+
+                get montoMargen() {
+                    return Math.max(0, this.precioVenta - this.costoTotal);
+                },
+
+                get montoMargenFormatted() {
+                    return '$' + Math.round(this.montoMargen).toLocaleString('es-CL');
+                },
+
+                get precioVentaFormatted() {
+                    return '$' + Math.round(this.precioVenta).toLocaleString('es-CL');
+                },
+
+                onMargenPctInput() {
+                    this.origenCambio = 'margen';
+                    let m = parseFloat(this.margenPct);
+                    if (isNaN(m)) m = 0;
+                    if (m >= 100) m = 99.99;
+                    let factor = 1 - (m / 100);
+                    if (factor > 0) {
+                        let p = Math.round(this.costoTotal / factor);
+                        this.precioVenta = p;
+                        this.precioVentaDisplay = p.toLocaleString('es-CL');
+                    } else {
+                        this.precioVenta = this.costoTotal;
+                        this.precioVentaDisplay = Math.round(this.costoTotal).toLocaleString('es-CL');
+                    }
+                },
+
+                formatPrecioVentaInput(e) {
+                    this.origenCambio = 'precio';
+                    let raw = e.target.value.replace(/[^0-9]/g, '');
+                    if (!raw) {
+                        this.precioVenta = 0;
+                        this.precioVentaDisplay = '';
+                        this.margenPct = 0;
+                    } else {
+                        let p = parseInt(raw, 10);
+                        this.precioVenta = p;
+                        this.precioVentaDisplay = p.toLocaleString('es-CL');
+                        if (p > 0) {
+                            let m = ((p - this.costoTotal) / p) * 100;
+                            if (m >= 100) m = 99.99;
+                            this.margenPct = parseFloat(m.toFixed(2));
+                        } else {
+                            this.margenPct = 0;
+                        }
+                    }
+                }
+            }
+        }
+
         function itemBudgetData() {
             return {
                 tipoItem: 'Material',
@@ -285,9 +502,13 @@
                 cantidad: 1,
                 descripcion: '',
                 
-                // Campos Específicos Material
+                // Campos Específicos Material & Combobox
                 selectedMaterial: '',
+                materialSearchQuery: '',
+                openMaterialDropdown: false,
+                highlightedIndex: 0,
                 costoMat: '',
+                costoMatDisplay: '',
                 cantidadMat: 1,
                 descripcionMat: '',
 
@@ -298,12 +519,14 @@
                 cantidadPersonas: 1,
                 horasPorDia: 8,
                 costoHora: 0,
+                costoHoraDisplay: '0',
                 descripcionMo: '',
                 moDescModificadaManualmente: false,
 
                 // Campos Específicos Servicio Tercero
                 descripcionServicio: '',
                 costoServicio: '',
+                costoServicioDisplay: '',
 
                 init() {
                     const keys = Object.keys(this.operariosMap);
@@ -312,6 +535,159 @@
                     }
                     this.onRolChange();
                     this.syncMaterial();
+                },
+
+                // Computed: Filtro reactivo en cliente de materiales
+                get filteredMateriales() {
+                    const list = Object.values(this.materialesMap);
+                    if (!this.materialSearchQuery || !this.materialSearchQuery.trim()) {
+                        return list.slice(0, 50);
+                    }
+                    const q = this.materialSearchQuery.toLowerCase().trim();
+                    return list.filter(m => {
+                        const nombreMatch = m.nombre && m.nombre.toLowerCase().includes(q);
+                        const catMatch = m.categoria && m.categoria.toLowerCase().includes(q);
+                        const skuMatch = m.sku && m.sku.toLowerCase().includes(q);
+                        return nombreMatch || catMatch || skuMatch;
+                    }).slice(0, 50);
+                },
+
+                selectMaterial(mat) {
+                    if (!mat) return;
+                    this.selectedMaterial = mat.id;
+                    this.materialSearchQuery = mat.nombre;
+                    this.setCostoMatNumeric(parseFloat(mat.costo) || 0);
+                    this.descripcionMat = mat.nombre;
+                    this.openMaterialDropdown = false;
+                    this.highlightedIndex = 0;
+                    this.syncMaterial();
+                },
+
+                clearMaterialSelection() {
+                    this.selectedMaterial = '';
+                    this.materialSearchQuery = '';
+                    this.setCostoMatNumeric('');
+                    this.cantidadMat = 1;
+                    this.descripcionMat = '';
+                    this.openMaterialDropdown = false;
+                    this.highlightedIndex = 0;
+                    this.syncMaterial();
+                },
+
+                setCostoMatNumeric(val) {
+                    if (val === '' || val === null || isNaN(val)) {
+                        this.costoMat = '';
+                        this.costoMatDisplay = '';
+                    } else {
+                        const num = Math.round(parseFloat(val));
+                        this.costoMat = num;
+                        this.costoMatDisplay = num.toLocaleString('es-CL');
+                    }
+                },
+
+                formatCostoMat(e) {
+                    const raw = e.target.value.replace(/[^0-9]/g, '');
+                    if (!raw) {
+                        this.costoMat = '';
+                        this.costoMatDisplay = '';
+                    } else {
+                        const num = parseInt(raw, 10);
+                        this.costoMat = num;
+                        this.costoMatDisplay = num.toLocaleString('es-CL');
+                    }
+                    this.syncMaterial();
+                },
+
+                get costoMatFormatted() {
+                    if (!this.costoMat && this.costoMat !== 0) return '$0';
+                    const num = Math.round(parseFloat(this.costoMat) || 0);
+                    return '$' + num.toLocaleString('es-CL');
+                },
+
+                setCostoHoraNumeric(val) {
+                    if (val === '' || val === null || isNaN(val)) {
+                        this.costoHora = 0;
+                        this.costoHoraDisplay = '0';
+                    } else {
+                        const num = Math.round(parseFloat(val));
+                        this.costoHora = num;
+                        this.costoHoraDisplay = num.toLocaleString('es-CL');
+                    }
+                },
+
+                formatCostoHora(e) {
+                    const raw = e.target.value.replace(/[^0-9]/g, '');
+                    if (!raw) {
+                        this.costoHora = 0;
+                        this.costoHoraDisplay = '';
+                    } else {
+                        const num = parseInt(raw, 10);
+                        this.costoHora = num;
+                        this.costoHoraDisplay = num.toLocaleString('es-CL');
+                    }
+                    this.recalcularMo();
+                },
+
+                get costoHoraFormatted() {
+                    const num = Math.round(parseFloat(this.costoHora) || 0);
+                    return '$' + num.toLocaleString('es-CL');
+                },
+
+                setCostoServicioNumeric(val) {
+                    if (val === '' || val === null || isNaN(val)) {
+                        this.costoServicio = '';
+                        this.costoServicioDisplay = '';
+                    } else {
+                        const num = Math.round(parseFloat(val));
+                        this.costoServicio = num;
+                        this.costoServicioDisplay = num.toLocaleString('es-CL');
+                    }
+                },
+
+                formatCostoServicio(e) {
+                    const raw = e.target.value.replace(/[^0-9]/g, '');
+                    if (!raw) {
+                        this.costoServicio = '';
+                        this.costoServicioDisplay = '';
+                    } else {
+                        const num = parseInt(raw, 10);
+                        this.costoServicio = num;
+                        this.costoServicioDisplay = num.toLocaleString('es-CL');
+                    }
+                    this.syncServicio();
+                },
+
+                get costoServicioFormatted() {
+                    if (!this.costoServicio && this.costoServicio !== 0) return '$0';
+                    const num = Math.round(parseFloat(this.costoServicio) || 0);
+                    return '$' + num.toLocaleString('es-CL');
+                },
+
+                navigateMaterialDown() {
+                    const total = this.filteredMateriales.length;
+                    if (total === 0) return;
+                    if (this.highlightedIndex < total - 1) {
+                        this.highlightedIndex++;
+                    } else {
+                        this.highlightedIndex = 0;
+                    }
+                },
+
+                navigateMaterialUp() {
+                    const total = this.filteredMateriales.length;
+                    if (total === 0) return;
+                    if (this.highlightedIndex > 0) {
+                        this.highlightedIndex--;
+                    } else {
+                        this.highlightedIndex = total - 1;
+                    }
+                },
+
+                selectHighlightedMaterial() {
+                    const filtered = this.filteredMateriales;
+                    if (filtered.length > 0 && this.highlightedIndex < filtered.length) {
+                        this.selectMaterial(filtered[this.highlightedIndex]);
+                    }
                 },
 
                 setTipoItem(tipo) {
@@ -323,17 +699,6 @@
                     } else if (tipo === 'Servicio_Tercero') {
                         this.syncServicio();
                     }
-                },
-
-                onMaterialChange() {
-                    if (this.selectedMaterial && this.materialesMap[this.selectedMaterial]) {
-                        const mat = this.materialesMap[this.selectedMaterial];
-                        this.costoMat = parseFloat(mat.costo) || 0;
-                        if (!this.descripcionMat) {
-                            this.descripcionMat = mat.nombre;
-                        }
-                    }
-                    this.syncMaterial();
                 },
 
                 syncMaterial() {
@@ -360,7 +725,7 @@
                         if (this.operariosMap[userId]) {
                             const op = this.operariosMap[userId];
                             this.nombreRolTrabajador = `${op.nombre} (${op.rol})`;
-                            this.costoHora = op.costo_hora || 0;
+                            this.setCostoHoraNumeric(op.costo_hora || 0);
                         }
                     } else {
                         this.nombreRolTrabajador = 'Mano de Obra';
@@ -405,13 +770,17 @@
                 },
 
                 resetForm() {
-                    this.selectedMaterial = '';
-                    this.costoMat = '';
-                    this.cantidadMat = 1;
-                    this.descripcionMat = '';
-                    this.descripcionServicio = '';
-                    this.costoServicio = '';
+                    this.clearMaterialSelection();
+
+                    // Restablecer valores predeterminados Mano de Obra
+                    this.diasHabiles = 2;
+                    this.cantidadPersonas = 1;
+                    this.horasPorDia = 8;
                     this.moDescModificadaManualmente = false;
+
+                    // Restablecer Servicio Tercero
+                    this.setCostoServicioNumeric('');
+                    this.descripcionServicio = '';
 
                     if (this.tipoItem === 'Material') {
                         this.syncMaterial();

@@ -4,21 +4,22 @@ from .models import Cotizacion, ItemCotizacion
 from apps.core_auth.models import AuditoriaLog
 
 
-def recalcular_cotizacion(cotizacion):
+def recalcular_cotizacion(cotizacion, nuevo_precio_venta=None):
     """
     Agrupa y suma los subtotales de los ítems de la cotización por su tipo
-    y recalcula los totales y el precio de venta.
+    y recalcula los totales y el precio de venta (o el margen si se proveyó un precio especifico).
     """
     items = cotizacion.items.all()
+    if items.exists():
+        costo_mat = items.filter(tipo_item__in=['Material', 'Insumo']).aggregate(total=Sum('subtotal_costo'))['total'] or Decimal('0.00')
+        costo_mo = items.filter(tipo_item='Mano_Obra').aggregate(total=Sum('subtotal_costo'))['total'] or Decimal('0.00')
+        costo_serv = items.filter(tipo_item='Servicio_Tercero').aggregate(total=Sum('subtotal_costo'))['total'] or Decimal('0.00')
 
-    costo_mat = items.filter(tipo_item__in=['Material', 'Insumo']).aggregate(total=Sum('subtotal_costo'))['total'] or Decimal('0.00')
-    costo_mo = items.filter(tipo_item='Mano_Obra').aggregate(total=Sum('subtotal_costo'))['total'] or Decimal('0.00')
-    costo_serv = items.filter(tipo_item='Servicio_Tercero').aggregate(total=Sum('subtotal_costo'))['total'] or Decimal('0.00')
+        cotizacion.costo_materiales_estimado = costo_mat
+        cotizacion.costo_mano_obra_estimado = costo_mo
+        cotizacion.costo_servicios_estimado = costo_serv
 
-    cotizacion.costo_materiales_estimado = costo_mat
-    cotizacion.costo_mano_obra_estimado = costo_mo
-    cotizacion.costo_servicios_estimado = costo_serv
-    cotizacion.calcular_totales()
+    cotizacion.calcular_totales(nuevo_precio_venta=nuevo_precio_venta)
     return cotizacion
 
 

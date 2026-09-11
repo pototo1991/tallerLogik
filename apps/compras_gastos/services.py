@@ -42,6 +42,9 @@ def registrar_factura_y_distribuir_gastos(factura_data, desgloses_list, usuario)
         monto_total_neto=monto_total_neto,
         forma_pago=factura_data.get('forma_pago', 'TRANSFERENCIA'),
         banco_origen=factura_data.get('banco_origen', ''),
+        id_banco=factura_data.get('id_banco'),
+        fecha_vencimiento_cheque=factura_data.get('fecha_vencimiento_cheque'),
+        numero_cheque=factura_data.get('numero_cheque'),
         observaciones=factura_data.get('observaciones', ''),
         id_usuario_registro=usuario
     )

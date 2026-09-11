@@ -3,80 +3,107 @@
 {% block title %}Registrar Pago de Cliente - TallerLogik{% endblock %}
 
 {% block content %}
-<div class="max-w-xl mx-auto space-y-6">
-    <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl flex items-center justify-between">
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="flex items-center justify-between bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl">
         <div>
             <h1 class="text-2xl font-bold text-white tracking-tight">Registrar Pago / Abono de Cliente</h1>
-            <p class="text-xs text-slate-400 mt-1">Ingreso de recaudación por hito de proyecto (50% / 30% / 20%)</p>
+            <p class="text-xs text-slate-400 mt-1">Ingreso de recaudación por hito de proyecto (50% / 30% / 20%) y conciliación bancaria</p>
         </div>
-        <a href="{% url 'rentabilidad_cobranzas:cobranzas_list' %}" class="text-xs font-semibold text-slate-400 hover:text-white transition">
+        <a href="{% url 'rentabilidad_cobranzas:cobranzas_list' %}" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700 transition">
             &larr; Volver a Cobranzas
         </a>
     </div>
 
     <div class="bg-[#0F172A] p-6 sm:p-8 rounded-2xl border border-slate-800 shadow-xl">
-        <form method="POST" class="space-y-4">
+        <form method="POST" class="space-y-6" novalidate>
             {% csrf_token %}
 
-            <div>
-                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                    Orden de Trabajo (OT) *
-                </label>
-                {{ form.id_proyecto }}
-                {% if form.id_proyecto.errors %}<p class="text-xs text-red-400 mt-1">{{ form.id_proyecto.errors.0 }}</p>{% endif %}
+            {% if form.errors %}
+            <div class="p-4 bg-red-950/80 border border-red-800 rounded-xl text-red-200 text-xs space-y-1 mb-4">
+                <div class="font-bold">Por favor corrige los siguientes errores:</div>
+                <ul class="list-disc list-inside">
+                    {% for field in form %}
+                    {% for error in field.errors %}
+                    <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                    {% endfor %}
+                    {% endfor %}
+                </ul>
             </div>
+            {% endif %}
 
-            <div>
-                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                    Concepto / Hito de Pago *
-                </label>
-                {{ form.concepto_hito }}
-                {% if form.concepto_hito.errors %}<p class="text-xs text-red-400 mt-1">{{ form.concepto_hito.errors.0 }}</p>{% endif %}
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div x-data="{ monto: '{{ form.monto_pago.value|default:'' }}' }">
-                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                        Monto Recibido ($) *
-                    </label>
-                    <input type="number" step="1" name="monto_pago" x-model="monto"
-                           value="{{ form.monto_pago.value|default:'' }}"
-                           class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 font-mono font-bold"
-                           placeholder="500000" required>
-                    <p x-show="monto && parseFloat(monto) > 0" x-cloak class="text-xs text-sky-400 font-mono font-bold mt-1.5 flex items-center gap-1">
-                        <span>💵 Monto:</span>
-                        <span x-text="'$' + Math.round(parseFloat(monto)).toLocaleString('es-CL')"></span>
-                    </p>
-                    {% if form.monto_pago.errors %}<p class="text-xs text-red-400 mt-1">{{ form.monto_pago.errors.0 }}</p>{% endif %}
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                        Medio de Pago *
-                    </label>
-                    {{ form.medio_pago }}
+            <!-- Sección 1: Proyecto & Hito del Pago -->
+            <div class="space-y-4">
+                <h3 class="text-sm font-bold text-sky-400 uppercase tracking-wider border-b border-slate-800 pb-2">
+                    📋 Proyecto & Hito del Pago
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">
+                            Orden de Trabajo (OT) *
+                        </label>
+                        {{ form.id_proyecto }}
+                        {% if form.id_proyecto.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.id_proyecto.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">
+                            Concepto / Hito de Pago *
+                        </label>
+                        {{ form.concepto_hito }}
+                        {% if form.concepto_hito.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.concepto_hito.errors.0 }}</p>{% endif %}
+                    </div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                        Fecha del Pago *
-                    </label>
-                    {{ form.fecha_pago }}
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                        N° Comprobante / Ref.
-                    </label>
-                    {{ form.comprobante_referencia }}
+            <!-- Sección 2: Detalles de la Transacción -->
+            <div class="space-y-4">
+                <h3 class="text-sm font-bold text-sky-400 uppercase tracking-wider border-b border-slate-800 pb-2">
+                    💵 Detalles de la Transacción & Referencia
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div x-data="{ monto: '{{ form.monto_pago.value|default:'' }}' }">
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">
+                            Monto Recibido ($) *
+                        </label>
+                        <input type="number" step="1" name="monto_pago" x-model="monto"
+                               value="{{ form.monto_pago.value|default:'' }}"
+                               class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 font-mono font-bold"
+                               placeholder="500000" required>
+                        <p x-show="monto && parseFloat(monto) > 0" x-cloak class="text-xs text-sky-400 font-mono font-bold mt-1.5 flex items-center gap-1">
+                            <span>💵 Monto:</span>
+                            <span x-text="'$' + Math.round(parseFloat(monto)).toLocaleString('es-CL')"></span>
+                        </p>
+                        {% if form.monto_pago.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.monto_pago.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">
+                            Medio de Pago *
+                        </label>
+                        {{ form.medio_pago }}
+                        {% if form.medio_pago.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.medio_pago.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">
+                            Fecha del Pago *
+                        </label>
+                        {{ form.fecha_pago }}
+                        {% if form.fecha_pago.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.fecha_pago.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">
+                            N° Comprobante / Ref. Transferencia
+                        </label>
+                        {{ form.comprobante_referencia }}
+                        {% if form.comprobante_referencia.errors %}<p class="text-xs text-red-400 mt-1 font-semibold">{{ form.comprobante_referencia.errors.0 }}</p>{% endif %}
+                    </div>
                 </div>
             </div>
 
-            <div class="pt-6 flex justify-end space-x-3">
-                <a href="{% url 'rentabilidad_cobranzas:cobranzas_list' %}" class="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 transition">
+            <!-- Botones -->
+            <div class="flex justify-end space-x-3 pt-4 border-t border-slate-800">
+                <a href="{% url 'rentabilidad_cobranzas:cobranzas_list' %}" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700 transition">
                     Cancelar
                 </a>
-                <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-semibold text-white bg-[#0284C7] hover:bg-sky-500 transition shadow-lg shadow-sky-500/20">
+                <button type="submit" class="px-6 py-2.5 bg-[#0284C7] hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-sky-500/20">
                     Guardar Registro de Pago
                 </button>
             </div>

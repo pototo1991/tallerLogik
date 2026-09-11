@@ -66,7 +66,7 @@ class Usuario(AbstractBaseUser, PermissionsMixin, SoftDeleteModel):
         ('dueno_taller', 'Dueño / Admin del Taller'),
         ('jefe_taller', 'Jefe de Taller'),
         ('operario', 'Operario'),
-        ('montador', 'Montador'),
+        ('administrativo', 'Administrativo'),
         ('compras', 'Compras'),
         ('disenador', 'Diseñador'),
         ('vendedor', 'Vendedor'),

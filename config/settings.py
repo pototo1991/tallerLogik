@@ -1,9 +1,14 @@
 import os
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+try:
+    import dotenv
+    BASE_DIR = Path(__file__).resolve().parent.parent
+    dotenv.load_dotenv(BASE_DIR / '.env')
+except ImportError:
+    BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Carga de variables de entorno opcionales
+# Carga de variables de entorno
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-tallerlogik-local-dev-key-change-in-prod')
 DEBUG = os.environ.get('DEBUG', '1') == '1'
 
@@ -62,26 +67,17 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Configuración de Base de Datos (PostgreSQL por defecto, fallback local SQLite para testing)
-DB_NAME = os.environ.get('DB_NAME', '')
-if DB_NAME:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': DB_NAME,
-            'USER': os.environ.get('DB_USER', 'taller_user'),
-            'PASSWORD': os.environ.get('DB_PASSWORD', 'taller_password_secure'),
-            'HOST': os.environ.get('DB_HOST', 'localhost'),
-            'PORT': os.environ.get('DB_PORT', '5432'),
-        }
+# Configuración de Base de Datos (PostgreSQL Obligatorio)
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME', 'tallerlogik_db'),
+        'USER': os.environ.get('DB_USER', 'taller_user'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'taller_password_secure'),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
+}
 
 # Modelo de Usuario Personalizado
 AUTH_USER_MODEL = 'core_auth.Usuario'

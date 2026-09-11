@@ -200,7 +200,7 @@ class ConfiguracionBaseTestCase(TestCase):
 
         # 3. Test Ejecutar Scraping Manual (restringido a superadmin_saas)
         from unittest.mock import patch, MagicMock
-        with patch('apps.configuracion_base.views.tarea_scraping_manual_async.delay') as mock_delay:
+        with patch('apps.configuracion_base.views.scraping_views.tarea_scraping_manual_async.delay') as mock_delay:
             mock_delay.return_value = MagicMock(id='dummy-task-id')
             url_scraping = reverse('configuracion_base:materiales_ejecutar_scraping')
             response = self.client.post(url_scraping)
@@ -208,7 +208,7 @@ class ConfiguracionBaseTestCase(TestCase):
             self.assertContains(response, "status/")
 
         # 4. Test Scraping Task Status (con mock de AsyncResult)
-        with patch('apps.configuracion_base.views.AsyncResult') as mock_async_result:
+        with patch('apps.configuracion_base.views.scraping_views.AsyncResult') as mock_async_result:
             mock_res = MagicMock()
             mock_res.state = 'SUCCESS'
             mock_res.result = {'creados': 5, 'actualizados': 0}
@@ -296,6 +296,21 @@ class MaterialFormTestCase(TestCase):
         self.assertEqual(material.proveedor, 'Placacentro')
         self.assertEqual(material.observaciones, 'Contacto: Pedro +56911223344, Sucursal San Bernardo')
 
+    def test_material_form_proveedores_desplegables(self):
+        """Verifica que al instanciar MaterialForm con empresa, el campo proveedor despliegue los proveedores del taller."""
+        from apps.core_auth.models import Empresa
+        from apps.configuracion_base.models import Proveedor
+        from apps.configuracion_base.forms import MaterialForm
+
+        empresa = Empresa.objects.create(nombre_empresa="Taller Proveedores Test", rut_o_identificacion="55555555-5")
+        Proveedor.objects.create(id_empresa=empresa, razon_social="Imperial S.A.")
+        Proveedor.objects.create(id_empresa=empresa, razon_social="Dap Ducasse")
+
+        form = MaterialForm(empresa=empresa)
+        choices_values = [c[0] for c in form.fields['proveedor'].choices]
+        self.assertIn('Imperial S.A.', choices_values)
+        self.assertIn('Dap Ducasse', choices_values)
+
 
 class OperarioFormTestCase(TestCase):
     """Pruebas unitarias para validación de correo electrónico en OperarioForm."""
@@ -326,6 +341,28 @@ class OperarioFormTestCase(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn('correo_electronico', form.errors)
         self.assertIn('correo electrónico válido', form.errors['correo_electronico'][0])
+
+    def test_operario_form_roles_choices(self):
+        from apps.configuracion_base.forms import OperarioForm
+        form = OperarioForm()
+        choices_labels = [c[1] for c in form.fields['rol'].choices]
+        self.assertEqual(choices_labels, sorted(choices_labels))
+        choices_keys = [c[0] for c in form.fields['rol'].choices]
+        self.assertNotIn('superadmin_saas', choices_keys)
+        self.assertIn('administrativo', choices_keys)
+
+    def test_operario_form_costo_hora_formateado(self):
+        from apps.configuracion_base.forms import OperarioForm
+        from decimal import Decimal
+        form = OperarioForm(data={
+            'nombre_completo': 'Juan Perez',
+            'correo_electronico': 'juan.perez@taller.cl',
+            'password': 'password123',
+            'rol': 'operario',
+            'costo_hora': '$12.500'
+        })
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data['costo_hora'], Decimal('12500.00'))
 
     def test_operario_form_correo_duplicado(self):
         from apps.configuracion_base.forms import OperarioForm
@@ -459,6 +496,23 @@ class ReestablecerPasswordAndToggleActivoTestCase(TestCase):
         self.assertEqual(self.operario.rol, 'jefe_taller')
         self.assertEqual(self.operario.costo_hora, Decimal('12500.00'))
 
+    def test_operario_edit_form_initial_costo_hora_formateado(self):
+        """Verifica que al instanciar OperarioEditForm con un costo de $40.000 se inicialice como '40.000' y no '40000.00'."""
+        from apps.configuracion_base.forms import OperarioEditForm
+        from django.urls import reverse
+
+        self.operario.costo_hora = Decimal("40000.00")
+        self.operario.save()
+
+        form = OperarioEditForm(instance=self.operario)
+        self.assertEqual(form.initial.get('costo_hora'), "40.000")
+
+        self.client.login(correo_electronico="dueno@taller.cl", password="oldpassword123")
+        url_edit = reverse('configuracion_base:operario_update', args=[self.operario.id])
+        response = self.client.get(url_edit)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'value="40.000"')
+
     def test_operarios_list_formato_moneda(self):
         """Verifica que en /configuracion/operarios/ la tarifa costo/hora se muestre con el formato $xxx.xxx sin decimales."""
         from django.urls import reverse
@@ -527,6 +581,150 @@ class InventarioTestCase(TestCase):
         self.material.refresh_from_db()
         self.assertEqual(self.material.stock_actual, Decimal("6.00"))
         self.assertEqual(mov.stock_resultante, Decimal("6.00"))
+
+
+class BancoFormTestCase(TestCase):
+    """Pruebas unitarias para desplegables de tipo de cuenta en BancoForm y modelo Banco."""
+
+    def test_banco_form_tipos_cuenta_validos(self):
+        from apps.configuracion_base.forms import BancoForm
+        from apps.configuracion_base.models import Banco
+
+        tipos_esperados = ['Cuenta Corriente', 'Cuenta Vista', 'Cuenta Ahorro', 'Cuenta Nómina']
+        for tipo in tipos_esperados:
+            form = BancoForm(data={
+                'nombre_banco': 'Banco de Chile',
+                'codigo_sbif': '001',
+                'numero_cuenta': '123456789',
+                'tipo_cuenta': tipo,
+                'activo': True
+            })
+            self.assertTrue(form.is_valid(), f"El tipo de cuenta '{tipo}' debería ser válido. Errores: {form.errors}")
+
+    def test_banco_form_tipo_cuenta_invalido(self):
+        from apps.configuracion_base.forms import BancoForm
+
+        form = BancoForm(data={
+            'nombre_banco': 'Banco de Chile',
+            'codigo_sbif': '001',
+            'numero_cuenta': '123456789',
+            'tipo_cuenta': 'Tipo Invalido Desconocido',
+            'activo': True
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('tipo_cuenta', form.errors)
+
+    def test_banco_form_numero_cuenta_duplicado_mismo_taller(self):
+        """Valida que no se pueda registrar un número de cuenta ya existente en el mismo taller."""
+        from apps.core_auth.models import Empresa
+        from apps.configuracion_base.models import Banco
+        from apps.configuracion_base.forms import BancoForm
+
+        empresa = Empresa.objects.create(nombre_empresa="Taller Banco 1", rut_o_identificacion="77777777-7")
+        Banco.objects.create(
+            id_empresa=empresa,
+            nombre_banco="BancoEstado",
+            numero_cuenta="9988776655",
+            tipo_cuenta="Cuenta Vista"
+        )
+
+        form = BancoForm(
+            data={
+                'nombre_banco': 'Banco BCI',
+                'codigo_sbif': '016',
+                'numero_cuenta': ' 9988776655 ',  # Mismo número con espacios alrededor
+                'tipo_cuenta': 'Cuenta Corriente',
+                'activo': True
+            },
+            empresa=empresa
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn('numero_cuenta', form.errors)
+        self.assertIn('ya se encuentra registrado', form.errors['numero_cuenta'][0])
+
+    def test_banco_form_numero_cuenta_mismo_numero_distinto_taller(self):
+        """Valida que dos talleres diferentes sí puedan registrar el mismo número de cuenta."""
+        from apps.core_auth.models import Empresa
+        from apps.configuracion_base.models import Banco
+        from apps.configuracion_base.forms import BancoForm
+
+        empresa1 = Empresa.objects.create(nombre_empresa="Taller 1", rut_o_identificacion="88888888-8")
+        empresa2 = Empresa.objects.create(nombre_empresa="Taller 2", rut_o_identificacion="99999999-9")
+
+        Banco.objects.create(
+            id_empresa=empresa1,
+            nombre_banco="Banco de Chile",
+            numero_cuenta="1122334455",
+            tipo_cuenta="Cuenta Corriente"
+        )
+
+        form = BancoForm(
+            data={
+                'nombre_banco': 'Banco Santander',
+                'codigo_sbif': '037',
+                'numero_cuenta': '1122334455',
+                'tipo_cuenta': 'Cuenta Corriente',
+                'activo': True
+            },
+            empresa=empresa2
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+
+
+class ProveedorFormValidationTestCase(TestCase):
+    """Pruebas unitarias para las validaciones de RUT (Módulo 11 y formato 12345678-9) y correo electrónico en ProveedorForm."""
+
+    def test_proveedor_form_rut_y_correo_validos(self):
+        from apps.configuracion_base.forms import ProveedorForm
+
+        form = ProveedorForm(data={
+            'razon_social': 'Imperial S.A.',
+            'rut_o_identificacion': '14138344-2',
+            'correo_contacto': 'ventas@imperial.cl',
+            'nombre_contacto': 'Pedro Ejecutivo'
+        })
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data['rut_o_identificacion'], '14138344-2')
+        self.assertEqual(form.cleaned_data['correo_contacto'], 'ventas@imperial.cl')
+
+    def test_proveedor_form_rut_formato_invalido_con_puntos(self):
+        from apps.configuracion_base.forms import ProveedorForm
+
+        form = ProveedorForm(data={
+            'razon_social': 'Imperial S.A.',
+            'rut_o_identificacion': '14.138.344-2',  # Con puntos -> debe fallar formato
+            'correo_contacto': 'ventas@imperial.cl'
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('rut_o_identificacion', form.errors)
+        self.assertIn('formato 12345678-9', form.errors['rut_o_identificacion'][0])
+
+    def test_proveedor_form_rut_modulo11_invalido(self):
+        from apps.configuracion_base.forms import ProveedorForm
+
+        form = ProveedorForm(data={
+            'razon_social': 'Imperial S.A.',
+            'rut_o_identificacion': '14138344-9',  # DV debería ser 2 -> debe fallar Módulo 11
+            'correo_contacto': 'ventas@imperial.cl'
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('rut_o_identificacion', form.errors)
+        self.assertIn('Módulo 11', form.errors['rut_o_identificacion'][0])
+
+    def test_proveedor_form_correo_invalido(self):
+        from apps.configuracion_base.forms import ProveedorForm
+
+        form = ProveedorForm(data={
+            'razon_social': 'Imperial S.A.',
+            'rut_o_identificacion': '14138344-2',
+            'correo_contacto': 'correo_sin_dominio_valido'
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('correo_contacto', form.errors)
+        self.assertIn('formato usuario@dominio.com', form.errors['correo_contacto'][0])
+
+
+
 
 
 

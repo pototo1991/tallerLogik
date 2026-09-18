@@ -1,4 +1,5 @@
 import uuid
+import re
 from decimal import Decimal
 from django.db import models
 from django.utils import timezone
@@ -47,6 +48,12 @@ class FacturaCompra(TenantAwareModel):
         """Retorna la cantidad de Órdenes de Trabajo (OTs) distintas a las que se distribuyó la factura."""
         return self.gastos_distribuidos.values('id_proyecto').distinct().count()
 
+    @property
+    def ots_afectadas(self):
+        """Retorna la lista de códigos de las OTs distintas asociadas a esta factura."""
+        codes = list(self.gastos_distribuidos.filter(id_proyecto__isnull=False).values_list('id_proyecto__codigo_ot', flat=True).distinct())
+        return codes
+
     def __str__(self):
         return f"Factura {self.numero_factura} - {self.proveedor} (${self.monto_total_neto})"
 
@@ -74,6 +81,43 @@ class GastoProyecto(TenantAwareModel):
         db_table = 'gastos_proyecto'
         verbose_name = 'Gasto Distribuido a Proyecto'
         verbose_name_plural = 'Gastos Distribuidos a Proyectos'
+
+    @property
+    def items_desglosados(self):
+        """
+        Si la descripción contiene '/', separa los distintos ítems.
+        Para cada ítem extrae su descripción textual y su cantidad correspondiente.
+        """
+        if not self.descripcion:
+            return [{'descripcion': '', 'cantidad': '1'}]
+
+        parts = [p.strip() for p in self.descripcion.split('/') if p.strip()]
+        if not parts:
+            return [{'descripcion': self.descripcion, 'cantidad': '1'}]
+
+        desglose = []
+        for part in parts:
+            matches = re.findall(
+                r'CANT[\.\s:]*(\d+(?:[.,]\d+)?(?:\s*(?:MTS|LT|L|UND|UNID|M2|ML|KG|PCS|PARES|UND))?)',
+                part,
+                re.IGNORECASE
+            )
+            if matches:
+                cant_str = ', '.join([m.strip() for m in matches])
+            else:
+                cant_str = '1'
+
+            desglose.append({
+                'descripcion': part,
+                'cantidad': cant_str
+            })
+        return desglose
+
+    @property
+    def cantidad_extraida(self):
+        """Extrae la cantidad o volumen desde el texto de la descripción del gasto."""
+        items = self.items_desglosados
+        return ', '.join([item['cantidad'] for item in items])
 
     def __str__(self):
         return f"{self.id_proyecto.codigo_ot}: ${self.monto_neto_asignado} ({self.tipo_gasto})"

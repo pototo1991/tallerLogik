@@ -150,3 +150,106 @@ class OrdenesTrabajoTestCase(TestCase):
         self.assertEqual(item_bom.id_material, mat)
 
 
+class ImportarExcelOTTestCase(TestCase):
+    def setUp(self):
+        import os
+        self.empresa = Empresa.objects.create(
+            nombre_empresa="Mueblería Test",
+            rut_o_identificacion="76.111.222-3"
+        )
+        self.usuario = Usuario.objects.create_user(
+            correo_electronico="test@taller.cl",
+            password="Password123!",
+            nombre_completo="Juan Perez",
+            id_empresa=self.empresa
+        )
+        self.excel_path = "/home/whsg27/proyectos/tallerLogik/COSTEO.xlsx"
+
+    def test_ingesta_limpia_costeo_excel(self):
+        """Verifica la primera ingesta atómica de COSTEO.xlsx."""
+        import os
+        from apps.ordenes_trabajo.services_excel_ot import procesar_excel_ot
+        from apps.compras_gastos.models import GastoProyecto, RegistroTiempo
+        from apps.rentabilidad_cobranzas.services import calcular_rentabilidad_proyecto
+
+        self.assertTrue(os.path.exists(self.excel_path))
+        
+        res = procesar_excel_ot(self.excel_path, self.empresa, self.usuario)
+        
+        self.assertEqual(res['codigo_ot'], 'OT-1069')
+        self.assertEqual(res['cliente'], 'FERNANDA KRAUSS')
+        self.assertEqual(res['total_cobrado'], 29869454.0)
+        self.assertEqual(res['pc_total'], 20521040.0)
+        
+        # Verificar permanencia en base de datos
+        proyecto = Proyecto.objects.get(id_empresa=self.empresa, codigo_ot='OT-1069')
+        self.assertEqual(proyecto.precio_cotizado, Decimal('29869454.00'))
+        self.assertEqual(proyecto.costo_presupuestado_total, Decimal('20521040.00'))
+        
+        # Verificar total de gastos y registros MOD
+        gastos_count = GastoProyecto.objects.filter(id_empresa=self.empresa, id_proyecto=proyecto).count()
+        tiempos_count = RegistroTiempo.objects.filter(id_empresa=self.empresa, id_proyecto=proyecto).count()
+        self.assertGreater(gastos_count, 0)
+        self.assertGreater(tiempos_count, 0)
+        
+        # Verificar cuadratura exacta de rentabilidad ($11.537.115,70 de costo real con CIF)
+        metricas = calcular_rentabilidad_proyecto(proyecto)
+        self.assertEqual(metricas['costo_real_total'], Decimal('11537115.70'))
+        self.assertEqual(metricas['margen_real_monto'], Decimal('18332338.30'))
+
+    def test_idempotencia_relectura_excel(self):
+        """Verifica que re-ejecutar la ingesta sobre el mismo archivo no duplique compras ni tiempos."""
+        from apps.ordenes_trabajo.services_excel_ot import procesar_excel_ot
+        from apps.compras_gastos.models import GastoProyecto, RegistroTiempo
+
+        procesar_excel_ot(self.excel_path, self.empresa, self.usuario)
+        gastos_iniciales = GastoProyecto.objects.filter(id_empresa=self.empresa).count()
+        tiempos_iniciales = RegistroTiempo.objects.filter(id_empresa=self.empresa).count()
+        
+        # Segunda ejecución
+        res2 = procesar_excel_ot(self.excel_path, self.empresa, self.usuario)
+        self.assertFalse(res2['creado_nuevo'])
+        self.assertEqual(res2['gastos_creados'], 0)
+        self.assertEqual(res2['tiempos_creados'], 0)
+        
+        gastos_finales = GastoProyecto.objects.filter(id_empresa=self.empresa).count()
+        tiempos_finales = RegistroTiempo.objects.filter(id_empresa=self.empresa).count()
+        
+        self.assertEqual(gastos_iniciales, gastos_finales)
+        self.assertEqual(tiempos_iniciales, tiempos_finales)
+
+    def test_proceso_nocturno_batch(self):
+        """Verifica el escaneo y procesamiento batch de directorio."""
+        from apps.ordenes_trabajo.services_excel_ot import procesar_directorio_nocturno
+        resultados = procesar_directorio_nocturno("/home/whsg27/proyectos/tallerLogik", self.empresa, self.usuario)
+        self.assertGreater(len(resultados), 0)
+        self.assertTrue(any(r['archivo'] == 'COSTEO.xlsx' and r['exito'] for r in resultados))
+
+    def test_filtro_dashboard_por_estado(self):
+        """Verifica que obtener_metricas_globales_taller permita filtrar OTs en curso vs terminadas."""
+        from apps.ordenes_trabajo.services_excel_ot import procesar_excel_ot
+        from apps.rentabilidad_cobranzas.services import obtener_metricas_globales_taller
+
+        procesar_excel_ot(self.excel_path, self.empresa, self.usuario, estado_override='entregado')
+        
+        metricas_terminadas = obtener_metricas_globales_taller(self.empresa, estado_filtro='terminado')
+        metricas_en_curso = obtener_metricas_globales_taller(self.empresa, estado_filtro='en_curso')
+        
+    def test_omite_ingesta_ot_terminada(self):
+        """Verifica que si una OT ya está terminada ('entregado'), re-ejecutar la ingesta no modifique ni intervenga sus datos históricos."""
+        from apps.ordenes_trabajo.services_excel_ot import procesar_excel_ot
+
+        # 1. Primera ingesta marcándola como terminada
+        res1 = procesar_excel_ot(self.excel_path, self.empresa, self.usuario, estado_override='entregado')
+        self.assertFalse(res1.get('ya_terminado', False))
+
+        # 2. Segunda ingesta incluso intentando forzar estado (debe detectar que está entregada en BD y omitir)
+        res2 = procesar_excel_ot(self.excel_path, self.empresa, self.usuario, estado_override='armado')
+        self.assertTrue(res2.get('ya_terminado', False))
+        self.assertEqual(res2['gastos_creados'], 0)
+        self.assertEqual(res2['tiempos_creados'], 0)
+        self.assertIn("TERMINADA", res2['mensaje'])
+
+
+
+

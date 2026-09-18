@@ -204,3 +204,39 @@ class ComprasGastosTestCase(TestCase):
         self.assertEqual(res_detail.status_code, 200)
         self.assertContains(res_detail, "$150.000")
         self.assertNotContains(res_detail, "$150000.00")
+
+    def test_desglose_sub_items_con_barra(self):
+        """Verifica que items_desglosados separe descripciones compuestas por '/' y extraiga las cantidades de cada sub-ítem."""
+        gasto = GastoProyecto.objects.create(
+            id_empresa=self.empresa,
+            id_factura_compra=FacturaCompra.objects.create(
+                id_empresa=self.empresa,
+                numero_factura="F-SUBITEMS",
+                proveedor="Proveedor Insumos",
+                monto_total_neto=Decimal("120000.00"),
+                id_usuario_registro=self.jefe_taller
+            ),
+            id_proyecto=self.proyecto1,
+            descripcion="FUENTE DE PODER 23W 12V INTERIOR (CANT.01)/FUENTE DE PODER 50W 12V INTERIOR (CANT.01)/FUENTE DE PODER 75W 12V INTERIOR (CANT.01)/CINTA LED 2835 BCO CALIDO 9.6W 12V (CANT.15MTS)",
+            tipo_gasto="Material",
+            monto_neto_asignado=Decimal("120000.00"),
+            id_usuario_registro=self.jefe_taller
+        )
+
+        items = gasto.items_desglosados
+        self.assertEqual(len(items), 4)
+
+        self.assertEqual(items[0]['descripcion'], "FUENTE DE PODER 23W 12V INTERIOR (CANT.01)")
+        self.assertEqual(items[0]['cantidad'], "01")
+
+        self.assertEqual(items[1]['descripcion'], "FUENTE DE PODER 50W 12V INTERIOR (CANT.01)")
+        self.assertEqual(items[1]['cantidad'], "01")
+
+        self.assertEqual(items[2]['descripcion'], "FUENTE DE PODER 75W 12V INTERIOR (CANT.01)")
+        self.assertEqual(items[2]['cantidad'], "01")
+
+        self.assertEqual(items[3]['descripcion'], "CINTA LED 2835 BCO CALIDO 9.6W 12V (CANT.15MTS)")
+        self.assertEqual(items[3]['cantidad'], "15MTS")
+
+        self.assertEqual(gasto.cantidad_extraida, "01, 01, 01, 15MTS")
+

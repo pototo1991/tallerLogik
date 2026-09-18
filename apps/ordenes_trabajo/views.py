@@ -1,3 +1,4 @@
+import os
 import json
 import logging
 from decimal import Decimal
@@ -232,3 +233,94 @@ class ProyectoItemsAPIView(LoginRequiredMixin, View):
             ]
         }
         return JsonResponse(data)
+
+
+class ImportarExcelOTView(LoginRequiredMixin, View):
+    """Vista HTMX / Web para ingesta de planillas Excel de OT y ejecución de lotes nocturnos."""
+    def get(self, request):
+        default_dir = '/home/whsg27/proyectos/tallerLogik'
+        context = {
+            'default_dir': default_dir,
+            'default_file': '/home/whsg27/proyectos/tallerLogik/COSTEO.xlsx'
+        }
+        return render(request, 'ordenes_trabajo/importar_ot_excel.html', context)
+
+    def post(self, request):
+        from .services_excel_ot import procesar_excel_ot, procesar_directorio_nocturno
+        import tempfile
+
+        modo = request.POST.get('modo', 'archivo')  # 'archivo', 'ruta_local', 'batch_nocturno'
+        estado_override = request.POST.get('estado_override') or None
+        is_htmx = bool(request.headers.get('HX-Request'))
+        
+        default_dir = '/home/whsg27/proyectos/tallerLogik'
+        base_context = {
+            'default_dir': default_dir,
+            'default_file': '/home/whsg27/proyectos/tallerLogik/COSTEO.xlsx'
+        }
+
+        try:
+            if modo == 'archivo' and request.FILES.get('archivo_excel'):
+                excel_file = request.FILES['archivo_excel']
+                # Guardar en archivo temporal seguro
+                with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tmp:
+                    for chunk in excel_file.chunks():
+                        tmp.write(chunk)
+                    tmp_path = tmp.name
+
+                res = procesar_excel_ot(tmp_path, request.tenant, request.user, estado_override=estado_override)
+                os.unlink(tmp_path)
+                
+                messages.success(
+                    request,
+                    f"¡Planilla cargada con éxito! OT: {res['codigo_ot']} ({res['nombre_proyecto']}). "
+                    f"Gastos nuevos: {res['gastos_creados']}, Tiempos MOD: {res['tiempos_creados']}."
+                )
+                if is_htmx:
+                    return render(request, 'ordenes_trabajo/partials/resultado_importacion_excel.html', {'resumen': res})
+                else:
+                    base_context['resumen'] = res
+                    return render(request, 'ordenes_trabajo/importar_ot_excel.html', base_context)
+
+            elif modo == 'ruta_local':
+                ruta_local = request.POST.get('ruta_local', '').strip()
+                if not ruta_local:
+                    ruta_local = '/home/whsg27/proyectos/tallerLogik/COSTEO.xlsx'
+                    
+                res = procesar_excel_ot(ruta_local, request.tenant, request.user, estado_override=estado_override)
+                messages.success(request, f"¡Ingesta exitosa desde la ruta! OT {res['codigo_ot']} sincronizada.")
+                if is_htmx:
+                    return render(request, 'ordenes_trabajo/partials/resultado_importacion_excel.html', {'resumen': res})
+                else:
+                    base_context['resumen'] = res
+                    return render(request, 'ordenes_trabajo/importar_ot_excel.html', base_context)
+
+            elif modo == 'batch_nocturno':
+                dir_path = request.POST.get('directorio_batch', '').strip() or '/home/whsg27/proyectos/tallerLogik'
+                resultados = procesar_directorio_nocturno(dir_path, request.tenant, request.user)
+                
+                exitos = sum(1 for r in resultados if r['exito'])
+                messages.success(request, f"Proceso batch completado. Planillas sincronizadas con éxito: {exitos}.")
+                if is_htmx:
+                    return render(request, 'ordenes_trabajo/partials/resultado_batch_excel.html', {'resultados': resultados})
+                else:
+                    base_context['resultados'] = resultados
+                    return render(request, 'ordenes_trabajo/importar_ot_excel.html', base_context)
+
+            else:
+                messages.error(request, "Modo de importación inválido o archivo no provisto.")
+                if is_htmx:
+                    return render(request, 'ordenes_trabajo/importar_ot_excel.html', {'error': 'Formulario incompleto.'})
+                else:
+                    base_context['error'] = 'Formulario incompleto.'
+                    return render(request, 'ordenes_trabajo/importar_ot_excel.html', base_context)
+
+        except Exception as e:
+            logger.error(f"Error procesando ingesta Excel: {e}")
+            messages.error(request, f"Error al procesar la planilla Excel: {e}")
+            if is_htmx:
+                return render(request, 'ordenes_trabajo/importar_ot_excel.html', {'error': str(e)})
+            else:
+                base_context['error'] = str(e)
+                return render(request, 'ordenes_trabajo/importar_ot_excel.html', base_context)
+

@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Ingesta e Importación de Planillas Excel OT | TallerLogik{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8" x-data="{ tab: 'archivo', modo: 'archivo', fileName: '' }">
+    <!-- Header -->
+    <div class="md:flex md:items-center md:justify-between mb-8">
+        <div class="flex-1 min-w-0">
+            <h1 class="text-2xl font-bold leading-7 text-slate-100 sm:text-3xl sm:truncate flex items-center gap-3">
+                <svg class="w-8 h-8 text-[#0284C7]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Ingesta & Sincronización de Planillas Excel OT
+            </h1>
+            <p class="mt-1 text-sm text-slate-400">
+                Procesamiento atómico, seguro e incremental de planillas de costeo de Órdenes de Trabajo (1 Excel por Proyecto).
+            </p>
+        </div>
+        <div class="mt-4 flex md:mt-0 md:ml-4">
+            <a href="{% url 'ordenes_trabajo:proyectos_list' %}" class="inline-flex items-center px-4 py-2 border border-slate-700 rounded-md shadow-sm text-sm font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 focus:outline-none">
+                Volver a Proyectos
+            </a>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="border-b border-slate-800 mb-8">
+        <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+            <button @click="tab = 'archivo'; modo = 'archivo'" :class="tab === 'archivo' ? 'border-[#0284C7] text-[#0284C7]' : 'border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-700'" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                Subir Planilla Individual
+            </button>
+            <button @click="tab = 'ruta'; modo = 'ruta_local'" :class="tab === 'ruta' ? 'border-[#0284C7] text-[#0284C7]' : 'border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-700'" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+                Procesar Ruta Local
+            </button>
+            <button @click="tab = 'batch'; modo = 'batch_nocturno'" :class="tab === 'batch' ? 'border-[#0284C7] text-[#0284C7]' : 'border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-700'" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                Proceso Nocturno (Batch)
+            </button>
+        </nav>
+    </div>
+
+    <!-- Main Card -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
+        <form method="post" enctype="multipart/form-data" hx-target="#resultado-container" hx-swap="innerHTML" hx-indicator="#loading-indicator">
+            {% csrf_token %}
+            <input type="hidden" name="modo" :value="modo">
+
+            <!-- TAB 1: SUBIR ARCHIVO -->
+            <div x-show="tab === 'archivo'" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Selecciona la planilla Excel (.xlsx)</label>
+                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-700 border-dashed rounded-lg hover:border-[#0284C7] transition-colors">
+                        <div class="space-y-1 text-center">
+                            <svg class="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                                <path d="M28 8H12a4 4 0 00-4 4v20a4 4 0 004 4h24a4 4 0 004-4V20L28 8z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                <path d="M28 8v12h12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <div class="flex text-sm text-slate-400 justify-center">
+                                <label for="file-upload" class="relative cursor-pointer bg-slate-800 hover:bg-slate-700 rounded-md font-medium text-[#0284C7] hover:text-sky-400 px-3 py-1 focus-within:outline-none transition">
+                                    <span>Seleccionar archivo</span>
+                                    <input id="file-upload" name="archivo_excel" type="file" accept=".xlsx" class="sr-only" @change="fileName = $event.target.files[0] ? $event.target.files[0].name : ''">
+                                </label>
+                                <p class="pl-2 pt-1">o arrastra y suelta aquí</p>
+                            </div>
+                            <p class="text-xs text-slate-500">Planilla Excel de OT (.xlsx) hasta 25MB</p>
+                        </div>
+                    </div>
+                    <!-- Feedback de archivo seleccionado -->
+                    <div x-show="fileName" x-cloak class="mt-3 p-3 bg-sky-950/80 border border-sky-800 rounded-lg flex items-center justify-between">
+                        <div class="flex items-center space-x-2 text-sky-300 text-xs font-semibold font-mono">
+                            <svg class="w-4 h-4 text-sky-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            <span x-text="'Archivo cargado listo para procesar: ' + fileName"></span>
+                        </div>
+                        <span class="text-[10px] text-emerald-400 font-bold uppercase tracking-wider bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">Cargado</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: RUTA LOCAL -->
+            <div x-show="tab === 'ruta'" class="space-y-6">
+                <div>
+                    <label for="ruta_local" class="block text-sm font-medium text-slate-300 mb-2">Ruta Absoluta del Archivo en el Servidor / Proyecto</label>
+                    <input type="text" name="ruta_local" id="ruta_local" value="{{ default_file }}" class="w-full bg-slate-950 border border-slate-700 rounded-md py-2 px-3 text-slate-200 text-sm focus:outline-none focus:border-[#0284C7]">
+                    <p class="mt-2 text-xs text-slate-400">Ejemplo en desarrollo: <code class="text-sky-400">/home/whsg27/proyectos/tallerLogik/COSTEO.xlsx</code></p>
+                </div>
+            </div>
+
+            <!-- TAB 3: BATCH NOCTURNO -->
+            <div x-show="tab === 'batch'" class="space-y-6">
+                <div>
+                    <label for="directorio_batch" class="block text-sm font-medium text-slate-300 mb-2">Directorio de Ingesta Nocturna</label>
+                    <input type="text" name="directorio_batch" id="directorio_batch" value="{{ default_dir }}" class="w-full bg-slate-950 border border-slate-700 rounded-md py-2 px-3 text-slate-200 text-sm focus:outline-none focus:border-[#0284C7]">
+                    <p class="mt-2 text-xs text-slate-400">Escanea e ingesta automáticamente todas las planillas <code class="text-sky-400">.xlsx</code> en esta carpeta sin duplicar OTs ni compras previamente cargadas.</p>
+                </div>
+            </div>
+
+            <!-- Opciones Adicionales -->
+            <div class="mt-6 pt-6 border-t border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="estado_override" class="block text-sm font-medium text-slate-300 mb-1">Estado de la OT (Opcional)</label>
+                    <select id="estado_override" name="estado_override" class="w-full bg-slate-950 border border-slate-700 rounded-md py-2 px-3 text-slate-200 text-sm focus:outline-none focus:border-[#0284C7]">
+                        <option value="">Autodetectar del Excel</option>
+                        <option value="armado">En Curso (Armado / Producción)</option>
+                        <option value="entregado">Terminado (Entregado Conforme)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="mt-8 flex items-center justify-between">
+                <div id="loading-indicator" class="htmx-indicator flex items-center gap-2 text-sm text-[#0284C7]">
+                    <svg class="animate-spin h-5 w-5 text-[#0284C7]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Procesando e ingiriendo datos...
+                </div>
+
+                <button type="submit" class="inline-flex items-center px-6 py-2.5 border border-transparent text-sm font-semibold rounded-lg shadow-sm text-white bg-[#0284C7] hover:bg-sky-600 focus:outline-none transition-colors">
+                    Procesar e Ingerir Planilla
+                </button>
+            </div>
+        </form>
+
+        <!-- Dynamic HTMX Results Container -->
+        <div id="resultado-container" class="mt-8">
+            {% if resumen %}
+                {% include "ordenes_trabajo/partials/resultado_importacion_excel.html" %}
+            {% elif resultados %}
+                {% include "ordenes_trabajo/partials/resultado_batch_excel.html" %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -18,7 +18,7 @@ logger = logging.getLogger('saas_taller')
 class FacturaCompraListView(LoginRequiredMixin, View):
     """Lista de facturas de compra registradas."""
     def get(self, request):
-        facturas = FacturaCompra.objects.filter(id_empresa=request.tenant).select_related('id_usuario_registro')
+        facturas = FacturaCompra.objects.filter(id_empresa=request.tenant).select_related('id_usuario_registro').prefetch_related('gastos_distribuidos__id_proyecto')
         return render(request, 'compras_gastos/facturas_list.html', {'facturas': facturas})
 
 
@@ -92,7 +92,7 @@ class FacturaCompraDetailView(LoginRequiredMixin, View):
     """Detalle de factura de compra y gastos asignados."""
     def get(self, request, pk):
         factura = get_object_or_404(FacturaCompra, pk=pk, id_empresa=request.tenant)
-        gastos = factura.gastos_distribuidos.all().select_related('id_proyecto')
+        gastos = factura.gastos_distribuidos.all().select_related('id_proyecto', 'id_proyecto__id_cliente', 'id_item_proyecto')
         return render(request, 'compras_gastos/factura_detail.html', {'factura': factura, 'gastos': gastos})
 
 

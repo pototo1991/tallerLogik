@@ -5,6 +5,7 @@ __pycache__/
 
 # Environment variables & virtual environments
 .env
+.env.local
 .venv/
 venv/
 ENV/
@@ -17,6 +18,7 @@ env/
 # Logs & Runtime
 logs/
 *.log
+*.pid
 
 # IDE & OS files
 .vscode/
@@ -24,5 +26,12 @@ logs/
 .DS_Store
 .agents/
 
+# Docker build / Temporary files
+.docker/
+tmp/
+*.tmp
+
 # Static / Media compiled/uploaded
 media/
+staticfiles/
+

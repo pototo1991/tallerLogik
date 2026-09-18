@@ -723,6 +723,27 @@ class ProveedorFormValidationTestCase(TestCase):
         self.assertIn('correo_contacto', form.errors)
         self.assertIn('formato usuario@dominio.com', form.errors['correo_contacto'][0])
 
+    def test_importar_excel_configuracion_view(self):
+        """Verifica que /configuracion/importar-excel/ utilice la interfaz e ingesta de planillas Excel OT."""
+        from django.urls import reverse
+        from apps.core_auth.models import Usuario, Empresa
+
+        empresa = Empresa.objects.create(nombre_empresa="Taller Config Test", rut_o_identificacion="66666666-6")
+        user = Usuario.objects.create_user(
+            correo_electronico="jefe_config@taller.cl",
+            password="password123",
+            nombre_completo="Jefe Config",
+            rol="jefe_taller",
+            id_empresa=empresa
+        )
+        self.client.login(correo_electronico="jefe_config@taller.cl", password="password123")
+
+        url = reverse('configuracion_base:importar_excel')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Ingesta & Sincronización de Planillas Excel OT")
+
+
 
 
 

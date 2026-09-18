@@ -2,13 +2,14 @@ from django.urls import path
 from .views import (
     AprobarCotizacionView, ProyectoListView, ProyectoDetailView,
     ItemProyectoRectificacionCreateView, ProyectoCambiarEstadoView,
-    ProyectoItemsAPIView, AsignarBodegaItemProyectoView
+    ProyectoItemsAPIView, AsignarBodegaItemProyectoView, ImportarExcelOTView
 )
 
 app_name = 'ordenes_trabajo'
 
 urlpatterns = [
     path('', ProyectoListView.as_view(), name='proyectos_list'),
+    path('importar-excel/', ImportarExcelOTView.as_view(), name='importar_excel'),
     path('<uuid:pk>/', ProyectoDetailView.as_view(), name='proyecto_detail'),
     path('aprobar-cotizacion/<uuid:cotizacion_pk>/', AprobarCotizacionView.as_view(), name='aprobar_cotizacion'),
     path('<uuid:proyecto_pk>/rectificacion/agregar/', ItemProyectoRectificacionCreateView.as_view(), name='rectificacion_create'),

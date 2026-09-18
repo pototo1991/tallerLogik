@@ -1,24 +1,9 @@
-from django.shortcuts import render, redirect
-from django.views import View
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib import messages
-
-from ..forms import ImportarExcelForm
+from apps.ordenes_trabajo.views import ImportarExcelOTView
 
 
-class ImportarExcelView(LoginRequiredMixin, View):
-    """Interfaz para cargar datos masivos de Clientes, Materiales o Proveedores desde Excel."""
-    def get(self, request):
-        form = ImportarExcelForm()
-        return render(request, 'configuracion_base/importar_excel.html', {'form': form, 'titulo': 'Carga Masiva desde Excel'})
-
-    def post(self, request):
-        form = ImportarExcelForm(request.POST, request.FILES)
-        if form.is_valid():
-            tipo = form.cleaned_data['tipo_datos']
-            archivo = request.FILES['archivo_excel']
-
-            messages.info(request, f"Archivo '{archivo.name}' subido correctamente. El procesador masivo de {tipo} se ha iniciado.")
-            return redirect('configuracion_base:importar_excel')
-
-        return render(request, 'configuracion_base/importar_excel.html', {'form': form, 'titulo': 'Carga Masiva desde Excel'})
+class ImportarExcelView(ImportarExcelOTView):
+    """
+    Punto de entrada en /configuracion/importar-excel/ para la ingesta
+    de planillas Excel OT y presupuestos (vía subida web, ruta local o lote nocturno).
+    """
+    pass

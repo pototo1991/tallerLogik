@@ -1,0 +1,40 @@
+<div class="bg-slate-950 border border-slate-800 rounded-lg p-6 space-y-4">
+    <div class="border-b border-slate-800 pb-3 flex justify-between items-center">
+        <h3 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+            <svg class="w-5 h-5 text-[#0284C7]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+            Resumen de Ingesta Batch Nocturna
+        </h3>
+        <span class="text-xs font-semibold px-2.5 py-1 rounded bg-slate-800 text-slate-300">
+            Total Procesados: {{ resultados|length }}
+        </span>
+    </div>
+
+    <div class="divide-y divide-slate-800 max-h-72 overflow-y-auto">
+        {% for r in resultados %}
+        <div class="py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                {% if r.exito %}
+                <span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
+                <span class="text-sm font-medium text-slate-200">{{ r.archivo }}</span>
+                <span class="text-xs font-mono text-[#0284C7]">({{ r.resumen.codigo_ot }})</span>
+                {% else %}
+                <span class="h-2.5 w-2.5 rounded-full bg-red-500"></span>
+                <span class="text-sm font-medium text-slate-200">{{ r.archivo }}</span>
+                {% endif %}
+            </div>
+
+            <div>
+                {% if r.exito %}
+                <span class="text-xs text-slate-400">
+                    +{{ r.resumen.gastos_creados }} gastos | +{{ r.resumen.tiempos_creados }} MOD
+                </span>
+                {% else %}
+                <span class="text-xs text-red-400 font-mono">{{ r.error }}</span>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <p class="text-sm text-slate-400 py-4">No se encontraron planillas Excel (.xlsx) en la carpeta indicada.</p>
+        {% endfor %}
+    </div>
+</div>

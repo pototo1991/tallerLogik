@@ -5,6 +5,7 @@
 
 {% block content %}
 <div class="space-y-6">
+    <!-- Header Factura -->
     <div class="bg-[#0F172A] p-6 rounded-2xl border border-slate-800 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
             <div class="flex items-center space-x-3">
@@ -19,7 +20,7 @@
                 <span class="text-xs font-mono text-slate-400">({{ factura.id_proveedor.rut_o_identificacion }})</span>
                 {% endif %}
             </p>
-            <div class="flex items-center gap-2 mt-1">
+            <div class="flex flex-wrap items-center gap-2 mt-2">
                 <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-950 text-sky-300 border border-sky-800">
                     Forma de Pago: {{ factura.get_forma_pago_display }}
                 </span>
@@ -34,50 +35,115 @@
                 </span>
                 {% endif %}
             </div>
-            <p class="text-xs text-slate-400 mt-1">Emisión: {{ factura.fecha_emision|date:"d/m/Y" }} | Registrado por: {{ factura.id_usuario_registro.nombre_completo }}</p>
+            <p class="text-xs text-slate-400 mt-2">
+                Emisión: <span class="text-slate-200 font-mono">{{ factura.fecha_emision|date:"d/m/Y" }}</span> | Registrado por: <span class="text-slate-200">{{ factura.id_usuario_registro.nombre_completo }}</span>
+            </p>
+            {% if factura.observaciones %}
+            <div class="mt-2 p-2 bg-slate-900 rounded-lg border border-slate-800 text-xs text-amber-300 font-mono">
+                Observaciones: {{ factura.observaciones }}
+            </div>
+            {% endif %}
         </div>
 
-        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 text-right">
-            <div class="text-xs text-slate-400">Monto Total Neto</div>
-            <div class="text-2xl font-extrabold font-mono text-emerald-400">{{ factura.monto_total_neto|clp }}</div>
+        <div class="flex flex-col items-end gap-3">
+            <a href="{% url 'compras_gastos:facturas_list' %}" class="px-3.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition">
+                &larr; Volver a Compras
+            </a>
+            <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 text-right min-w-[160px]">
+                <div class="text-xs text-slate-400 font-medium">Monto Total Neto</div>
+                <div class="text-2xl font-extrabold font-mono text-emerald-400">{{ factura.monto_total_neto|clp }}</div>
+            </div>
         </div>
     </div>
 
-    <!-- Desglose por Proyecto -->
+    <!-- Desglose por Proyecto y Detalle Comprado -->
     <div class="bg-[#0F172A] rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
-        <div class="px-6 py-4 border-b border-slate-800">
-            <h3 class="text-base font-bold text-white">Distribución de Gastos a Órdenes de Trabajo</h3>
+        <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center">
+            <div>
+                <h3 class="text-base font-bold text-white">Distribución de Gastos & Detalle de Ítems Comprados</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Especificación de insumos/materiales adquiridos y asignados a Órdenes de Trabajo</p>
+            </div>
+            <span class="px-3 py-1 rounded-md text-xs font-mono font-semibold bg-slate-800 text-sky-400">
+                {{ gastos|length }} Ítem{% if gastos|length != 1 %}s{% endif %} Registrado{% if gastos|length != 1 %}s{% endif %}
+            </span>
         </div>
+
         <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm text-slate-300">
+            <table class="w-full text-left text-sm text-slate-300 border-collapse">
                 <thead class="bg-slate-900 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">
                     <tr>
-                        <th class="px-6 py-4">Orden de Trabajo (OT)</th>
-                        <th class="px-6 py-4">Cliente</th>
-                        <th class="px-6 py-4">Tipo de Gasto</th>
-                        <th class="px-6 py-4">Monto Neto Asignado ($)</th>
+                        <th class="px-6 py-4 whitespace-nowrap">Orden de Trabajo (OT)</th>
+                        <th class="px-6 py-4 whitespace-nowrap">Cliente</th>
+                        <th class="px-6 py-4 whitespace-nowrap">Tipo de Gasto</th>
+                        <th class="px-6 py-4">Detalle / Qué se Compró</th>
+                        <th class="px-6 py-4 whitespace-nowrap text-center">Cantidad</th>
+                        <th class="px-6 py-4 whitespace-nowrap text-right">Monto Neto Asignado ($)</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-800">
                     {% for g in gastos %}
-                    <tr class="hover:bg-slate-900/50 transition">
-                        <td class="px-6 py-4 font-mono font-bold text-sky-400">
-                            {{ g.id_proyecto.codigo_ot }} - {{ g.id_proyecto.nombre_proyecto }}
-                        </td>
-                        <td class="px-6 py-4 text-xs text-slate-300">
-                            {{ g.id_proyecto.id_cliente.razon_social }}
-                        </td>
-                        <td class="px-6 py-4">
-                            <span class="px-2 py-0.5 rounded text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700">
-                                {{ g.get_tipo_gasto_display }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 font-mono font-bold text-emerald-400">
-                            {{ g.monto_neto_asignado|clp }}
+                        {% with sub_count=g.items_desglosados|length %}
+                        {% for sub in g.items_desglosados %}
+                        <tr class="hover:bg-slate-900/50 transition">
+                            {% if forloop.first %}
+                            <td rowspan="{{ sub_count }}" class="px-6 py-4 font-mono font-bold text-sky-400 whitespace-nowrap align-top border-r border-slate-800/40">
+                                <a href="{% url 'ordenes_trabajo:proyecto_detail' g.id_proyecto.pk %}" class="hover:underline">
+                                    {{ g.id_proyecto.codigo_ot }} - {{ g.id_proyecto.nombre_proyecto }}
+                                </a>
+                            </td>
+                            <td rowspan="{{ sub_count }}" class="px-6 py-4 text-xs text-slate-300 whitespace-nowrap align-top border-r border-slate-800/40">
+                                {{ g.id_proyecto.id_cliente.razon_social }}
+                            </td>
+                            <td rowspan="{{ sub_count }}" class="px-6 py-4 whitespace-nowrap align-top border-r border-slate-800/40">
+                                <span class="px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700">
+                                    {{ g.get_tipo_gasto_display }}
+                                </span>
+                            </td>
+                            {% endif %}
+
+                            <!-- Detalle de Sub-Ítem -->
+                            <td class="px-6 py-3 font-medium text-slate-100 align-middle">
+                                {% if sub_count > 1 %}
+                                <div class="flex items-start space-x-2.5">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-800 text-sky-400 border border-slate-700 shrink-0 mt-0.5">
+                                        Ítem {{ forloop.counter }}
+                                    </span>
+                                    <span class="text-slate-200 text-xs sm:text-sm font-medium leading-relaxed">{{ sub.descripcion }}</span>
+                                </div>
+                                {% else %}
+                                <span class="text-slate-200 text-xs sm:text-sm font-medium leading-relaxed">{{ sub.descripcion }}</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Cantidad de Sub-Ítem -->
+                            <td class="px-6 py-3 text-center whitespace-nowrap align-middle">
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-mono font-bold bg-sky-950 text-sky-300 border border-sky-800">
+                                    {{ sub.cantidad }}
+                                </span>
+                            </td>
+
+                            {% if forloop.first %}
+                            <td rowspan="{{ sub_count }}" class="px-6 py-4 font-mono font-bold text-emerald-400 text-right whitespace-nowrap align-top border-l border-slate-800/40">
+                                {{ g.monto_neto_asignado|clp }}
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                        {% endwith %}
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center text-slate-500">
+                            No hay desgloses de gastos registrados para esta factura.
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
+                <tfoot>
+                    <tr class="bg-slate-900 font-bold border-t border-slate-700 text-sm">
+                        <td colspan="5" class="px-6 py-4 text-right text-slate-300 uppercase text-xs tracking-wider">TOTAL ASIGNADO A OTS</td>
+                        <td class="px-6 py-4 font-mono text-emerald-400 text-right font-extrabold">{{ factura.monto_total_neto|clp }}</td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
     </div>

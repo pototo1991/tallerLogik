@@ -7,12 +7,12 @@ services:
     volumes:
       - .:/app
     ports:
-      - "8080:8000"
+      - "8190:8000"
     environment:
       - DEBUG=1
       - SECRET_KEY=django-insecure-tallerlogik-local-dev-key-change-in-prod
       - ALLOWED_HOSTS=tallerlogik.lisc.cl,localhost,127.0.0.1,0.0.0.0
-      - CSRF_TRUSTED_ORIGINS=https://tallerlogik.lisc.cl,http://localhost:8080,http://localhost:8000
+      - CSRF_TRUSTED_ORIGINS=https://tallerlogik.lisc.cl,http://localhost:8190,http://localhost:8080,http://localhost:8000
       - DB_NAME=tallerlogik_db
       - DB_USER=taller_user
       - DB_PASSWORD=taller_password_secure

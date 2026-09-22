@@ -1,5 +1,6 @@
 services:
   web:
+    container_name: tallerlogik_web
     build: .
     command: >
       sh -c "python manage.py migrate --no-input &&
@@ -11,7 +12,7 @@ services:
     environment:
       - DEBUG=1
       - SECRET_KEY=django-insecure-tallerlogik-local-dev-key-change-in-prod
-      - ALLOWED_HOSTS=tallerlogik.lisc.cl,localhost,127.0.0.1,0.0.0.0
+      - ALLOWED_HOSTS=tallerlogik.lisc.cl,tallerlogik_web,localhost,127.0.0.1,0.0.0.0
       - CSRF_TRUSTED_ORIGINS=https://tallerlogik.lisc.cl,http://localhost:8190,http://localhost:8080,http://localhost:8000
       - DB_NAME=tallerlogik_db
       - DB_USER=taller_user

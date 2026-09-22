@@ -79,11 +79,12 @@ class RentabilidadCobranzasTestCase(TestCase):
 
         m = calcular_rentabilidad_proyecto(self.proyecto)
 
-        self.assertEqual(m['costo_real_total'], Decimal("700000.00"))
-        self.assertEqual(m['desviacion_costo'], Decimal("50000.00"))
+        self.assertEqual(m['costo_real_total'], Decimal("770000.00"))
+        self.assertEqual(m['desviacion_costo'], Decimal("120000.00"))
         self.assertTrue(m['sobrecosto_detectado'])
-        # Margen real: (1,000,000 - 700,000) / 1,000,000 = 30.00%
-        self.assertEqual(m['margen_real_pct'], Decimal("30.00"))
+        # Margen real: (1,000,000 - 770,000) / 1,000,000 = 23.00%
+        self.assertEqual(m['margen_real_pct'], Decimal("23.00"))
+
 
     def test_gestion_cobranzas_saldo_pendiente(self):
         """Verifica la disminución del saldo pendiente al registrar abonos del cliente."""

@@ -157,7 +157,41 @@ def obtener_metricas_globales_taller(tenant, estado_filtro='todos'):
         id_proyecto__in=proyectos_ids
     ).aggregate(total=Sum('costo_mano_obra_calculado'))['total'] or Decimal('0.00')
 
-    costo_real_global = total_gastos_materiales + total_costo_mod
+    # Proyectos con sobrecosto, conteo por estado y desglose global por categoría
+    proyectos_sobrecosto = 0
+    proyectos_metricas = []
+
+    conteo_estados = {
+        'planificado': 0,
+        'corte': 0,
+        'armado': 0,
+        'laca_pintura': 0,
+        'montaje': 0,
+        'entregado': 0,
+    }
+
+    desglose_costos_global = {
+        'materiales': Decimal('0.00'),
+        'mod': Decimal('0.00'),
+        'subcontratos': Decimal('0.00'),
+        'admin_cif': Decimal('0.00'),
+    }
+
+    for p in proyectos:
+        m = calcular_rentabilidad_proyecto(p)
+        proyectos_metricas.append(m)
+        if m['sobrecosto_detectado']:
+            proyectos_sobrecosto += 1
+
+        if p.estado in conteo_estados:
+            conteo_estados[p.estado] += 1
+
+        desglose_costos_global['materiales'] += m['gastos_materiales_reales']
+        desglose_costos_global['mod'] += m['costo_mod_real']
+        desglose_costos_global['subcontratos'] += m['costo_subcontratos_real']
+        desglose_costos_global['admin_cif'] += m['costo_admin_real']
+
+    costo_real_global = sum((m['costo_real_total'] for m in proyectos_metricas), Decimal('0.00'))
 
     # Cobranzas
     total_cobrado = PagoProyecto.objects.filter(
@@ -171,15 +205,6 @@ def obtener_metricas_globales_taller(tenant, estado_filtro='todos'):
     utilidad_neta_global = total_facturado_neto - costo_real_global
     margen_global_pct = ((utilidad_neta_global / total_facturado_neto) * Decimal('100.00')).quantize(Decimal('0.01')) if total_facturado_neto > Decimal('0.00') else Decimal('0.00')
 
-    # Proyectos con sobrecosto
-    proyectos_sobrecosto = 0
-    proyectos_metricas = []
-    for p in proyectos:
-        m = calcular_rentabilidad_proyecto(p)
-        proyectos_metricas.append(m)
-        if m['sobrecosto_detectado']:
-            proyectos_sobrecosto += 1
-
     return {
         'estado_filtro': estado_filtro,
         'total_proyectos': total_proyectos,
@@ -192,4 +217,7 @@ def obtener_metricas_globales_taller(tenant, estado_filtro='todos'):
         'total_saldo_pendiente': total_saldo_pendiente,
         'proyectos_sobrecosto': proyectos_sobrecosto,
         'proyectos_metricas': proyectos_metricas,
+        'conteo_estados': conteo_estados,
+        'desglose_costos_global': desglose_costos_global,
     }
+

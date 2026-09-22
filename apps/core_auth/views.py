@@ -1,17 +1,24 @@
+import json
 import logging
-from django.shortcuts import render, redirect, get_object_or_404
-from django.views import View
+import os
+
+from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib import messages
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from django.views import View
+
+from apps.rentabilidad_cobranzas.services import obtener_metricas_globales_taller
 from .forms import LoginForm, OnboardingTallerForm
-from .models import Empresa, Usuario, AuditoriaLog
+from .models import AuditoriaLog, Empresa, Usuario
 
 logger = logging.getLogger('saas_taller')
 
 
 class CustomLoginView(View):
-    """Vista de Inicio de Sesión."""
+    """Vista para la autenticación e inicio de sesión de usuarios."""
     def get(self, request):
         if request.user.is_authenticated:
             return redirect('core_auth:dashboard')
@@ -39,7 +46,7 @@ class CustomLoginView(View):
 
 
 class CustomLogoutView(View):
-    """Vista de Cierre de Sesión."""
+    """Vista para el cierre de sesión seguro del usuario."""
     def get(self, request):
         if request.user.is_authenticated:
             logger.info(f"Cierre de sesión del usuario {request.user.correo_electronico}")
@@ -48,7 +55,7 @@ class CustomLogoutView(View):
 
 
 class OnboardingTallerView(LoginRequiredMixin, View):
-    """Vista para el Onboarding / Alta de un nuevo Taller y su Dueño (restringido a Superadmin SaaS)."""
+    """Vista para el Onboarding / Alta de un nuevo Taller (Tenant) y su Usuario Dueño (restringido a Superadmin SaaS)."""
     login_url = '/auth/login/'
 
     def get(self, request):
@@ -97,10 +104,8 @@ class OnboardingTallerView(LoginRequiredMixin, View):
         return render(request, 'core_auth/onboarding_taller.html', {'form': form})
 
 
-from django.utils import timezone
-
 class ToggleEmpresaEstadoView(LoginRequiredMixin, View):
-    """Permite al Superadmin cambiar el estado (Habilitado / Deshabilitado) de un Taller/Empresa cliente."""
+    """Permite al Superadmin SaaS habilitar o deshabilitar la cuenta de un Taller/Empresa cliente."""
     def post(self, request, pk):
         if request.user.rol != 'superadmin_saas':
             messages.error(request, "No tienes permisos para cambiar el estado de las empresas.")
@@ -131,11 +136,8 @@ class ToggleEmpresaEstadoView(LoginRequiredMixin, View):
         return redirect('core_auth:dashboard')
 
 
-from apps.rentabilidad_cobranzas.services import obtener_metricas_globales_taller
-
-
 class DashboardView(LoginRequiredMixin, View):
-    """Dashboard principal del usuario con vista diferenciada según su rol."""
+    """Dashboard principal del usuario con vista diferenciada según su rol y gráficos interactivos."""
     login_url = '/auth/login/'
 
     def get(self, request):
@@ -152,6 +154,60 @@ class DashboardView(LoginRequiredMixin, View):
                 emp.dueno = Usuario.all_objects.filter(id_empresa=emp, rol='dueno_taller').first()
             usuarios_saas = list(Usuario.all_objects.select_related('id_empresa').all().order_by('-fecha_creacion'))
 
+        chart_estados_json = json.dumps({})
+        chart_costos_json = json.dumps({})
+        chart_ots_json = json.dumps([])
+        chart_cobranzas_json = json.dumps({})
+
+        if metricas:
+            chart_estados_json = json.dumps({
+                'Planificado': metricas['conteo_estados'].get('planificado', 0),
+                'En Corte': metricas['conteo_estados'].get('corte', 0),
+                'En Armado': metricas['conteo_estados'].get('armado', 0),
+                'Laca y Pintura': metricas['conteo_estados'].get('laca_pintura', 0),
+                'Montaje en Obra': metricas['conteo_estados'].get('montaje', 0),
+                'Entregado Conforme': metricas['conteo_estados'].get('entregado', 0),
+            })
+
+            chart_costos_json = json.dumps({
+                'Materiales e Insumos': float(metricas['desglose_costos_global']['materiales']),
+                'Mano de Obra Directa': float(metricas['desglose_costos_global']['mod']),
+                'Subcontratos / MO Externa': float(metricas['desglose_costos_global']['subcontratos']),
+                'Gastos Admin / CIF': float(metricas['desglose_costos_global']['admin_cif']),
+            })
+
+            chart_ots_data = [
+                {
+                    'id': str(m['proyecto'].id),
+                    'codigo': m['proyecto'].codigo_ot,
+                    'nombre': m['proyecto'].nombre_proyecto,
+                    'cliente': m['proyecto'].id_cliente.razon_social if m['proyecto'].id_cliente else 'Sin Cliente',
+                    'estado': m['proyecto'].estado,
+                    'estado_display': m['proyecto'].get_estado_display(),
+                    'precio_cotizado': float(m['precio_cotizado']),
+                    'presupuestado': float(m['costo_presupuestado']),
+                    'real': float(m['costo_real_total']),
+                    'desviacion': float(m['desviacion_costo']),
+                    'sobrecosto': m['sobrecosto_detectado'],
+                    'margen_real_pct': float(m['margen_real_pct']),
+                    'desglose': {
+                        'Materiales e Insumos': float(m['gastos_materiales_reales']),
+                        'Mano de Obra Directa': float(m['costo_mod_real']),
+                        'Subcontratos / MO Externa': float(m['costo_subcontratos_real']),
+                        'Gastos Admin / CIF': float(m['costo_admin_real']),
+                    },
+                    'total_pagado': float(m['total_pagado_cliente']),
+                    'saldo_pendiente': float(m['saldo_pendiente_cobro']),
+                }
+                for m in metricas['proyectos_metricas']
+            ]
+            chart_ots_json = json.dumps(chart_ots_data)
+
+            chart_cobranzas_json = json.dumps({
+                'Total Cobrado': float(metricas['total_cobrado']),
+                'Saldo Pendiente': float(metricas['total_saldo_pendiente']) if metricas['total_saldo_pendiente'] > 0 else 0.0,
+            })
+
         context = {
             'usuario': user,
             'empresa': empresa,
@@ -159,14 +215,16 @@ class DashboardView(LoginRequiredMixin, View):
             'metricas': metricas,
             'total_empresas': len(empresas_saas) if user.rol == 'superadmin_saas' else 0,
             'total_usuarios': len(usuarios_saas) if user.rol == 'superadmin_saas' else 0,
+
             'empresas_saas': empresas_saas,
             'usuarios_saas': usuarios_saas,
+            'chart_estados_json': chart_estados_json,
+            'chart_costos_json': chart_costos_json,
+            'chart_ots_json': chart_ots_json,
+            'chart_cobranzas_json': chart_cobranzas_json,
         }
         return render(request, 'core_auth/dashboard.html', context)
 
-
-import os
-from django.conf import settings
 
 class VerLogsView(LoginRequiredMixin, View):
     """Vista para visualizar los logs del sistema (sistema_actividad.log y sistema_errores.log).
@@ -214,4 +272,3 @@ class VerLogsView(LoginRequiredMixin, View):
             return render(request, 'core_auth/partials/log_content.html', context)
 
         return render(request, 'core_auth/logs_viewer.html', context)
-

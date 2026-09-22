@@ -161,6 +161,7 @@ class ImportarExcelOTTestCase(TestCase):
             correo_electronico="test@taller.cl",
             password="Password123!",
             nombre_completo="Juan Perez",
+            rol="dueno_taller",
             id_empresa=self.empresa
         )
         self.excel_path = "/home/whsg27/proyectos/tallerLogik/COSTEO.xlsx"
@@ -249,6 +250,34 @@ class ImportarExcelOTTestCase(TestCase):
         self.assertEqual(res2['gastos_creados'], 0)
         self.assertEqual(res2['tiempos_creados'], 0)
         self.assertIn("TERMINADA", res2['mensaje'])
+
+    def test_creacion_dinamica_operarios_excel(self):
+        """Verifica que la ingesta de Excel cree automáticamente los operarios en BD y conserve los montos leídos."""
+        from apps.ordenes_trabajo.services_excel_ot import procesar_excel_ot
+        from apps.compras_gastos.models import RegistroTiempo
+        from apps.core_auth.models import Usuario
+
+        # 1. Ingerir Excel
+        procesar_excel_ot(self.excel_path, self.empresa, self.usuario)
+
+        # 2. Verificar que se crearon usuarios operarios asignados a la empresa
+        operarios_creados = Usuario.objects.filter(id_empresa=self.empresa, rol='operario')
+        self.assertGreater(operarios_creados.count(), 0)
+
+        operario = operarios_creados.first()
+        self.assertEqual(operario.costo_hora, Decimal('5000.00'))
+        self.assertTrue(operario.correo_electronico.endswith('@taller.local'))
+
+        # 3. Verificar que si se modifica el costo_hora del operario a $10.000, los registros históricos de tiempo de la OT no cambian su costo_mano_obra_calculado
+        reg_tiempo = RegistroTiempo.objects.filter(id_empresa=self.empresa, id_usuario=operario).first()
+        if reg_tiempo:
+            costo_original = reg_tiempo.costo_mano_obra_calculado
+            operario.costo_hora = Decimal('10000.00')
+            operario.save()
+
+            reg_tiempo.refresh_from_db()
+            self.assertEqual(reg_tiempo.costo_mano_obra_calculado, costo_original)
+
 
 
 

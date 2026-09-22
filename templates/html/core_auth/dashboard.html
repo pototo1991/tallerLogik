@@ -291,24 +291,36 @@
 
     <!-- KPI Cards Resumen Financiero -->
     {% if metricas %}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <!-- 1. Ventas Netas Totales -->
         <div class="bg-[#0F172A] p-5 rounded-2xl border border-slate-800 shadow-xl">
-            <div class="text-xs font-semibold text-slate-400 uppercase">Ventas Netas Totales</div>
+            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Ventas Netas Totales</div>
             <div class="text-2xl font-extrabold font-mono text-white mt-1">{{ metricas.total_facturado_neto|clp }}</div>
             <div class="text-xs text-slate-500 mt-1 font-mono">{{ metricas.total_proyectos }} Proyectos / OTs</div>
         </div>
+
+        <!-- 2. Costo Real Incurrido -->
         <div class="bg-[#0F172A] p-5 rounded-2xl border border-slate-800 shadow-xl">
-            <div class="text-xs font-semibold text-slate-400 uppercase">Utilidad Neta Taller</div>
-            <div class="text-2xl font-extrabold font-mono text-emerald-400 mt-1">{{ metricas.utilidad_neta_global|clp }}
-            </div>
-            <div class="text-xs text-emerald-400/80 mt-1 font-mono font-semibold">{{ metricas.margen_global_pct }}%
-                Margen sobre Venta</div>
+            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Costo Real Incurrido</div>
+            <div class="text-2xl font-extrabold font-mono text-amber-400 mt-1">{{ metricas.costo_real_global|clp }}</div>
+            <div class="text-xs text-slate-500 mt-1 font-mono">Presupuestado: {{ metricas.costo_presupuestado_global|clp }}</div>
         </div>
+
+        <!-- 3. Utilidad Neta Taller -->
         <div class="bg-[#0F172A] p-5 rounded-2xl border border-slate-800 shadow-xl">
-            <div class="text-xs font-semibold text-slate-400 uppercase">Total Recaudado / Cobrado</div>
+            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Utilidad Neta Taller</div>
+            <div class="text-2xl font-extrabold font-mono text-emerald-400 mt-1">{{ metricas.utilidad_neta_global|clp }}</div>
+            <div class="text-xs text-emerald-400/80 mt-1 font-mono font-semibold">{{ metricas.margen_global_pct }}% Margen sobre Venta</div>
+        </div>
+
+        <!-- 4. Total Recaudado / Cobrado -->
+        <div class="bg-[#0F172A] p-5 rounded-2xl border border-slate-800 shadow-xl">
+            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Recaudado / Cobrado</div>
             <div class="text-2xl font-extrabold font-mono text-sky-400 mt-1">{{ metricas.total_cobrado|clp }}</div>
             <div class="text-xs text-sky-400/80 mt-1 font-mono font-semibold">Pendiente: {{ metricas.total_saldo_pendiente|clp }}</div>
         </div>
+
+        <!-- 5. OTs con Sobrecosto -->
         <div @click="showSobrecostoModal = true"
             class="bg-[#0F172A] p-5 rounded-2xl border shadow-xl transition cursor-pointer group hover:scale-[1.01] {% if metricas.proyectos_sobrecosto > 0 %} border-red-800 bg-red-950/20 hover:border-red-500 {% else %} border-slate-800 hover:border-emerald-500 {% endif %}">
             <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider group-hover:text-white transition">OTs con Sobrecosto</div>
@@ -328,70 +340,170 @@
     </div>
     {% endif %}
 
-    <!-- Quick Action Cards Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+    <!-- SECCIÓN DE GRÁFICOS INTERACTIVOS CON FILTROS DINÁMICOS POR OT Y ETAPA -->
+    <div class="space-y-6">
+        <!-- Header de la Sección y Accesos Rápidos -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+            <div>
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                    📊 Indicadores & Gráficos Interactivos del Taller
+                </h2>
+                <p class="text-xs text-slate-400 mt-0.5">Filtra por Orden de Trabajo (OT) o Etapa para inspeccionar la rentabilidad y producción en tiempo real.</p>
+            </div>
+            <!-- Accesos Rápidos a Módulos -->
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{% url 'cotizador:cotizaciones_list' %}" class="px-3 py-1.5 bg-slate-800 hover:bg-sky-950 text-sky-300 border border-slate-700 hover:border-sky-700 rounded-xl text-xs font-semibold transition flex items-center gap-1.5">
+                    📝 Cotizaciones
+                </a>
+                <a href="{% url 'ordenes_trabajo:proyectos_list' %}" class="px-3 py-1.5 bg-slate-800 hover:bg-indigo-950 text-indigo-300 border border-slate-700 hover:border-indigo-700 rounded-xl text-xs font-semibold transition flex items-center gap-1.5">
+                    📋 Tablero Kanban
+                </a>
+                <a href="{% url 'compras_gastos:facturas_list' %}" class="px-3 py-1.5 bg-slate-800 hover:bg-emerald-950 text-emerald-300 border border-slate-700 hover:border-emerald-700 rounded-xl text-xs font-semibold transition flex items-center gap-1.5">
+                    🛒 Compras
+                </a>
+                <a href="{% url 'rentabilidad_cobranzas:dashboard_rentabilidad' %}" class="px-3 py-1.5 bg-slate-800 hover:bg-amber-950 text-amber-300 border border-slate-700 hover:border-amber-700 rounded-xl text-xs font-semibold transition flex items-center gap-1.5">
+                    📈 Informe Rentabilidad
+                </a>
+            </div>
+        </div>
 
-        <!-- Card Cotizador -->
-        <a href="{% url 'cotizador:cotizaciones_list' %}"
-            class="block bg-[#0F172A] p-6 rounded-2xl border border-slate-800 hover:border-sky-500 transition group shadow-lg">
-            <div
-                class="w-12 h-12 rounded-xl bg-sky-950 border border-sky-800 text-sky-400 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition">
-                📝
-            </div>
-            <h3 class="text-lg font-bold text-white mt-4 group-hover:text-sky-400 transition">Cotizador & PDFs</h3>
-            <p class="text-xs text-slate-400 mt-1">Cotizaciones con versiones v1/v2, margen sobre venta y exportación
-                PDF WeasyPrint.</p>
-            <div class="mt-4 text-xs font-semibold text-sky-400 flex items-center">
-                Ver Cotizaciones &rarr;
-            </div>
-        </a>
+        <!-- BARRA DE FILTROS INTERACTIVOS Y MODO DEMOSTRATIVO -->
+        <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
+                <!-- Selector de OT -->
+                <div class="flex-1 min-w-[240px]">
+                    <label class="block text-[11px] uppercase font-bold text-slate-400 mb-1 flex items-center gap-1">
+                        🔍 Filtrar por Orden de Trabajo (OT)
+                    </label>
+                    <select id="selectFiltroOT" class="w-full bg-slate-950 text-sky-400 border border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-sky-500 transition">
+                        <option value="TODAS">📊 Consolidado General (Todas las Órdenes de Trabajo)</option>
+                    </select>
+                </div>
 
-        <!-- Card OTs / Kanban -->
-        <a href="{% url 'ordenes_trabajo:proyectos_list' %}"
-            class="block bg-[#0F172A] p-6 rounded-2xl border border-slate-800 hover:border-sky-500 transition group shadow-lg">
-            <div
-                class="w-12 h-12 rounded-xl bg-indigo-950 border border-indigo-800 text-indigo-400 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition">
-                📋
+                <!-- Selector de Etapa Kanban -->
+                <div class="w-full sm:w-56">
+                    <label class="block text-[11px] uppercase font-bold text-slate-400 mb-1 flex items-center gap-1">
+                        🏭 Filtrar por Etapa Kanban
+                    </label>
+                    <select id="selectFiltroEtapa" class="w-full bg-slate-950 text-slate-300 border border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-sky-500 transition">
+                        <option value="TODAS">Todas las etapas</option>
+                        <option value="planificado">Planificado</option>
+                        <option value="corte">En Corte</option>
+                        <option value="armado">En Armado</option>
+                        <option value="laca_pintura">Laca y Pintura</option>
+                        <option value="montaje">Montaje en Obra</option>
+                        <option value="entregado">Entregado Conforme</option>
+                    </select>
+                </div>
             </div>
-            <h3 class="text-lg font-bold text-white mt-4 group-hover:text-indigo-400 transition">Kanban & OTs</h3>
-            <p class="text-xs text-slate-400 mt-1">Tablero de producción, BOM de materiales y rectificaciones en
-                terreno.</p>
-            <div class="mt-4 text-xs font-semibold text-indigo-400 flex items-center">
-                Ver Tablero OT &rarr;
-            </div>
-        </a>
 
-        <!-- Card Compras & Tiempos -->
-        <a href="{% url 'compras_gastos:facturas_list' %}"
-            class="block bg-[#0F172A] p-6 rounded-2xl border border-slate-800 hover:border-sky-500 transition group shadow-lg">
-            <div
-                class="w-12 h-12 rounded-xl bg-emerald-950 border border-emerald-800 text-emerald-400 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition">
-                🛒
+            <!-- Indicator Badge Demo/Real -->
+            <div id="badgeModoData" class="shrink-0 flex items-center gap-2">
+                <!-- Inyectado por JS -->
             </div>
-            <h3 class="text-lg font-bold text-white mt-4 group-hover:text-emerald-400 transition">Compras & Facturas
-            </h3>
-            <p class="text-xs text-slate-400 mt-1">Facturas de compras con desglose neto en vivo y cuadratura estricta.
-            </p>
-            <div class="mt-4 text-xs font-semibold text-emerald-400 flex items-center">
-                Ver Compras &rarr;
-            </div>
-        </a>
+        </div>
 
-        <!-- Card Rentabilidad & KPIs -->
-        <a href="{% url 'rentabilidad_cobranzas:dashboard_rentabilidad' %}"
-            class="block bg-[#0F172A] p-6 rounded-2xl border border-slate-800 hover:border-sky-500 transition group shadow-lg">
-            <div
-                class="w-12 h-12 rounded-xl bg-amber-950 border border-amber-800 text-amber-400 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition">
-                📈
+        <!-- TARJETA INFORMATIVA DINÁMICA DE LA OT SELECCIONADA -->
+        <div id="cardDetalleOTSeleccionada" class="hidden bg-[#0F172A] p-5 rounded-2xl border border-sky-800/60 shadow-xl space-y-3 transition">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-3">
+                    <span id="otBadgeEstado" class="px-3 py-1 rounded-full text-xs font-bold border"></span>
+                    <div>
+                        <h3 id="otNombreTitulo" class="text-base font-bold text-white"></h3>
+                        <p id="otClienteSub" class="text-xs text-slate-400"></p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3 text-xs font-mono">
+                    <div>
+                        <span class="text-slate-400">Margen Real: </span>
+                        <strong id="otMargenVal" class="text-emerald-400 font-bold"></strong>
+                    </div>
+                    <span id="otSobrecostoStatus"></span>
+                </div>
             </div>
-            <h3 class="text-lg font-bold text-white mt-4 group-hover:text-amber-400 transition">Rentabilidad & KPIs</h3>
-            <p class="text-xs text-slate-400 mt-1">Dashboard de desviación Presupuestado vs. Real y alertas de
-                sobrecosto.</p>
-            <div class="mt-4 text-xs font-semibold text-amber-400 flex items-center">
-                Ver Rentabilidad &rarr;
+            <!-- Sub-métricas de la OT -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-mono">
+                <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                    <div class="text-[10px] text-slate-400 font-sans uppercase">Precio Cotizado Net</div>
+                    <div id="otPrecioCotizado" class="text-sm font-bold text-white mt-0.5"></div>
+                </div>
+                <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                    <div class="text-[10px] text-slate-400 font-sans uppercase">Costo Presupuestado</div>
+                    <div id="otCostoPresup" class="text-sm font-bold text-sky-400 mt-0.5"></div>
+                </div>
+                <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                    <div class="text-[10px] text-slate-400 font-sans uppercase">Costo Real Incurrido</div>
+                    <div id="otCostoReal" class="text-sm font-bold text-amber-400 mt-0.5"></div>
+                </div>
+                <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                    <div class="text-[10px] text-slate-400 font-sans uppercase">Saldo Pendiente Cobro</div>
+                    <div id="otSaldoCobro" class="text-sm font-bold text-emerald-400 mt-0.5"></div>
+                </div>
             </div>
-        </a>
+        </div>
 
+        <!-- GRID DE LOS 4 GRÁFICOS INTERACTIVOS -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Gráfico 1: Estado de Producción / Etapa -->
+            <div class="bg-[#0F172A] p-5 rounded-2xl border border-slate-800 shadow-xl flex flex-col justify-between space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 id="tituloChart1" class="text-sm font-bold text-white flex items-center gap-2">
+                        <span>🏭</span> Distribución por Etapas de Producción
+                    </h3>
+                    <span id="subtituloChart1" class="text-[11px] font-mono font-semibold text-slate-400 bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">
+                        {{ metricas.total_proyectos }} Total OTs
+                    </span>
+                </div>
+                <div class="relative h-64 w-full flex items-center justify-center">
+                    <canvas id="chartEstadosProduccion"></canvas>
+                </div>
+            </div>
+
+            <!-- Gráfico 2: Desglose por Categoria de Costo -->
+            <div class="bg-[#0F172A] p-5 rounded-2xl border border-slate-800 shadow-xl flex flex-col justify-between space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 id="tituloChart2" class="text-sm font-bold text-white flex items-center gap-2">
+                        <span>💰</span> Desglose por Categoría de Costos ($ CLP)
+                    </h3>
+                    <span id="subtituloChart2" class="text-[11px] font-mono font-semibold text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded-lg border border-emerald-800/60">
+                        {{ metricas.costo_real_global|clp }}
+                    </span>
+                </div>
+                <div class="relative h-64 w-full flex items-center justify-center">
+                    <canvas id="chartDesgloseCostos"></canvas>
+                </div>
+            </div>
+
+            <!-- Gráfico 3: Comparativo Presupuestado vs Real -->
+            <div class="bg-[#0F172A] p-5 rounded-2xl border border-slate-800 shadow-xl space-y-3">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                        <h3 id="tituloChart3" class="text-sm font-bold text-white flex items-center gap-2">
+                            <span>📈</span> Presupuestado vs. Real Incurrido
+                        </h3>
+                        <p id="subtituloChart3" class="text-xs text-slate-400 mt-0.5">Comparativa de variaciones y desvíos</p>
+                    </div>
+                </div>
+                <div class="relative h-64 w-full">
+                    <canvas id="chartComparativoOTs"></canvas>
+                </div>
+            </div>
+
+            <!-- Gráfico 4: Estado de Cobranza & Flujo de Pago -->
+            <div class="bg-[#0F172A] p-5 rounded-2xl border border-slate-800 shadow-xl space-y-3">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                        <h3 id="tituloChart4" class="text-sm font-bold text-white flex items-center gap-2">
+                            <span>💳</span> Avance de Cobranza & Recaudación
+                        </h3>
+                        <p id="subtituloChart4" class="text-xs text-slate-400 mt-0.5">Monto recaudado vs Saldo pendiente por cobrar</p>
+                    </div>
+                </div>
+                <div class="relative h-64 w-full flex items-center justify-center">
+                    <canvas id="chartCobranzasFlujo"></canvas>
+                </div>
+            </div>
+        </div>
     </div>
     {% endif %}
 
@@ -495,4 +607,512 @@
         </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    let rawOts = JSON.parse('{{ chart_ots_json|escapejs }}' || '[]');
+    let isDemoMode = false;
+
+    // Si no existen OTs en la BD del taller, cargar datos demostrativos representativos
+    if (!rawOts || rawOts.length === 0) {
+        isDemoMode = true;
+        rawOts = [
+            {
+                id: 'demo-1',
+                codigo: 'OT-2026-001',
+                nombre: 'Cocina Integral Encinado Premium',
+                cliente: 'Inmobiliaria Del Sur SpA',
+                estado: 'armado',
+                estado_display: 'En Armado',
+                precio_cotizado: 12500000,
+                presupuestado: 8125000,
+                real: 8450000,
+                desviacion: 325000,
+                sobrecosto: true,
+                margen_real_pct: 32.4,
+                desglose: {
+                    'Materiales e Insumos': 4200000,
+                    'Mano de Obra Directa': 2650000,
+                    'Subcontratos / MO Externa': 1100000,
+                    'Gastos Admin / CIF': 500000
+                },
+                total_pagado: 6250000,
+                saldo_pendiente: 6250000
+            },
+            {
+                id: 'demo-2',
+                codigo: 'OT-2026-002',
+                nombre: 'Vestidor & Closet Duomo',
+                cliente: 'Arquitectura & Diseño',
+                estado: 'corte',
+                estado_display: 'En Corte',
+                precio_cotizado: 8400000,
+                presupuestado: 5460000,
+                real: 3200000,
+                desviacion: 0,
+                sobrecosto: false,
+                margen_real_pct: 61.9,
+                desglose: {
+                    'Materiales e Insumos': 2400000,
+                    'Mano de Obra Directa': 800000,
+                    'Subcontratos / MO Externa': 0,
+                    'Gastos Admin / CIF': 0
+                },
+                total_pagado: 4200000,
+                saldo_pendiente: 4200000
+            },
+            {
+                id: 'demo-3',
+                codigo: 'OT-2026-003',
+                nombre: 'Mueble Recepción Roble Nativo',
+                cliente: 'Clínica Las Condes',
+                estado: 'laca_pintura',
+                estado_display: 'Laca y Pintura',
+                precio_cotizado: 4500000,
+                presupuestado: 2925000,
+                real: 2750000,
+                desviacion: 0,
+                sobrecosto: false,
+                margen_real_pct: 38.8,
+                desglose: {
+                    'Materiales e Insumos': 1200000,
+                    'Mano de Obra Directa': 1050000,
+                    'Subcontratos / MO Externa': 300000,
+                    'Gastos Admin / CIF': 200000
+                },
+                total_pagado: 4500000,
+                saldo_pendiente: 0
+            },
+            {
+                id: 'demo-4',
+                codigo: 'OT-2026-004',
+                nombre: 'Rack TV Floating Walnut',
+                cliente: 'Particular - C. Valenzuela',
+                estado: 'planificado',
+                estado_display: 'Planificado',
+                precio_cotizado: 2800000,
+                presupuestado: 1820000,
+                real: 450000,
+                desviacion: 0,
+                sobrecosto: false,
+                margen_real_pct: 83.9,
+                desglose: {
+                    'Materiales e Insumos': 450000,
+                    'Mano de Obra Directa': 0,
+                    'Subcontratos / MO Externa': 0,
+                    'Gastos Admin / CIF': 0
+                },
+                total_pagado: 1400000,
+                saldo_pendiente: 1400000
+            },
+            {
+                id: 'demo-5',
+                codigo: 'OT-2026-005',
+                nombre: 'Isla de Cocina Cuarzo & MDF',
+                cliente: 'Constructora Horizon',
+                estado: 'montaje',
+                estado_display: 'Montaje en Obra',
+                precio_cotizado: 9600000,
+                presupuestado: 6240000,
+                real: 6800000,
+                desviacion: 560000,
+                sobrecosto: true,
+                margen_real_pct: 29.1,
+                desglose: {
+                    'Materiales e Insumos': 3800000,
+                    'Mano de Obra Directa': 1800000,
+                    'Subcontratos / MO Externa': 800000,
+                    'Gastos Admin / CIF': 400000
+                },
+                total_pagado: 7680000,
+                saldo_pendiente: 1920000
+            },
+            {
+                id: 'demo-6',
+                codigo: 'OT-2026-006',
+                nombre: 'Cava de Vinos Roble Nativo',
+                cliente: 'Restaurante Clandestino',
+                estado: 'entregado',
+                estado_display: 'Entregado Conforme',
+                precio_cotizado: 6200000,
+                presupuestado: 4030000,
+                real: 3950000,
+                desviacion: 0,
+                sobrecosto: false,
+                margen_real_pct: 36.2,
+                desglose: {
+                    'Materiales e Insumos': 2100000,
+                    'Mano de Obra Directa': 1400000,
+                    'Subcontratos / MO Externa': 250000,
+                    'Gastos Admin / CIF': 200000
+                },
+                total_pagado: 6200000,
+                saldo_pendiente: 0
+            }
+        ];
+    }
+
+    // Actualizar Badge de Data Mode
+    const badgeDiv = document.getElementById('badgeModoData');
+    if (badgeDiv) {
+        if (isDemoMode) {
+            badgeDiv.innerHTML = `<span class="px-3 py-1 bg-amber-950/80 text-amber-300 border border-amber-800 rounded-full text-xs font-semibold flex items-center gap-1.5 shadow-sm">
+                <span>💡</span> Vista Demostrativa (${rawOts.length} OTs de prueba en distintas etapas)
+            </span>`;
+        } else {
+            badgeDiv.innerHTML = `<span class="px-3 py-1 bg-emerald-950/80 text-emerald-300 border border-emerald-800 rounded-full text-xs font-semibold flex items-center gap-1.5 shadow-sm">
+                <span>✅</span> Producción Real (${rawOts.length} OTs activas/históricas)
+            </span>`;
+        }
+    }
+
+    // Poblar Selector de OTs
+    const selectOT = document.getElementById('selectFiltroOT');
+    if (selectOT) {
+        selectOT.innerHTML = '<option value="TODAS">📊 Consolidado General (Todas las Órdenes de Trabajo)</option>';
+        rawOts.forEach(ot => {
+            const opt = document.createElement('option');
+            opt.value = ot.codigo;
+            opt.textContent = `${ot.codigo} — ${ot.nombre} (${ot.cliente})`;
+            selectOT.appendChild(opt);
+        });
+    }
+
+    const selectEtapa = document.getElementById('selectFiltroEtapa');
+
+    const formatCLP = (val) => '$ ' + Math.round(val || 0).toLocaleString('es-CL');
+
+    let chart1 = null, chart2 = null, chart3 = null, chart4 = null;
+
+    function renderCharts() {
+        const codigoSel = selectOT.value;
+        const etapaSel = selectEtapa.value;
+
+        // Filtrar OTs por etapa si se seleccionó una etapa específica
+        let listFiltered = rawOts;
+        if (etapaSel !== 'TODAS') {
+            listFiltered = listFiltered.filter(o => o.estado === etapaSel);
+        }
+
+        const cardDetalle = document.getElementById('cardDetalleOTSeleccionada');
+
+        if (codigoSel !== 'TODAS') {
+            // VISTA INDIVIDUAL DE OT SELECCIONADA
+            const ot = rawOts.find(o => o.codigo === codigoSel);
+            if (ot && cardDetalle) {
+                cardDetalle.classList.remove('hidden');
+                document.getElementById('otNombreTitulo').textContent = `${ot.codigo} — ${ot.nombre}`;
+                document.getElementById('otClienteSub').textContent = `Cliente: ${ot.cliente}`;
+
+                const badgeEstado = document.getElementById('otBadgeEstado');
+                badgeEstado.textContent = ot.estado_display;
+                badgeEstado.className = 'px-3 py-1 rounded-full text-xs font-bold border ';
+                if (ot.estado === 'entregado') badgeEstado.className += 'bg-emerald-950 text-emerald-300 border-emerald-800';
+                else if (ot.estado === 'corte') badgeEstado.className += 'bg-sky-950 text-sky-300 border-sky-800';
+                else if (ot.estado === 'armado') badgeEstado.className += 'bg-indigo-950 text-indigo-300 border-indigo-800';
+                else if (ot.estado === 'laca_pintura') badgeEstado.className += 'bg-purple-950 text-purple-300 border-purple-800';
+                else if (ot.estado === 'montaje') badgeEstado.className += 'bg-amber-950 text-amber-300 border-amber-800';
+                else badgeEstado.className += 'bg-slate-800 text-slate-300 border-slate-700';
+
+                document.getElementById('otMargenVal').textContent = `${ot.margen_real_pct.toFixed(1)}%`;
+                const statusDiv = document.getElementById('otSobrecostoStatus');
+                if (ot.sobrecosto) {
+                    statusDiv.innerHTML = `<span class="px-2.5 py-1 bg-red-950 text-red-400 border border-red-800 rounded-full font-bold">⚠️ Sobrecosto +${formatCLP(ot.desviacion)}</span>`;
+                } else {
+                    statusDiv.innerHTML = `<span class="px-2.5 py-1 bg-emerald-950 text-emerald-400 border border-emerald-800 rounded-full font-bold">✓ En Presupuesto</span>`;
+                }
+
+                document.getElementById('otPrecioCotizado').textContent = formatCLP(ot.precio_cotizado);
+                document.getElementById('otCostoPresup').textContent = formatCLP(ot.presupuestado);
+                document.getElementById('otCostoReal').textContent = formatCLP(ot.real);
+                document.getElementById('otSaldoCobro').textContent = formatCLP(ot.saldo_pendiente);
+
+                // Render Charts for single OT
+                _renderChartsSingleOT(ot);
+            }
+        } else {
+            // VISTA CONSOLIDADA (TODAS LAS OTS)
+            if (cardDetalle) cardDetalle.classList.add('hidden');
+            _renderChartsConsolidated(listFiltered);
+        }
+    }
+
+    function _renderChartsConsolidated(ots) {
+        if (chart1) chart1.destroy();
+        if (chart2) chart2.destroy();
+        if (chart3) chart3.destroy();
+        if (chart4) chart4.destroy();
+
+        // 1. Chart Estados Producción
+        const conteo = {
+            'Planificado': 0, 'En Corte': 0, 'En Armado': 0,
+            'Laca y Pintura': 0, 'Montaje en Obra': 0, 'Entregado Conforme': 0
+        };
+        ots.forEach(o => {
+            if (o.estado === 'planificado') conteo['Planificado']++;
+            else if (o.estado === 'corte') conteo['En Corte']++;
+            else if (o.estado === 'armado') conteo['En Armado']++;
+            else if (o.estado === 'laca_pintura') conteo['Laca y Pintura']++;
+            else if (o.estado === 'montaje') conteo['Montaje en Obra']++;
+            else if (o.estado === 'entregado') conteo['Entregado Conforme']++;
+        });
+
+        document.getElementById('tituloChart1').innerHTML = `<span>🏭</span> Distribución por Etapas Kanban`;
+        document.getElementById('subtituloChart1').textContent = `${ots.length} OTs Evaluadas`;
+
+        chart1 = new Chart(document.getElementById('chartEstadosProduccion'), {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(conteo),
+                datasets: [{
+                    data: Object.values(conteo),
+                    backgroundColor: ['#64748B', '#0284C7', '#6366F1', '#8B5CF6', '#F59E0B', '#10B981'],
+                    borderWidth: 2, borderColor: '#0F172A', hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right', labels: { color: '#94A3B8', font: { size: 11, weight: '600' }, usePointStyle: true } },
+                    tooltip: { backgroundColor: '#0F172A', borderColor: '#334155', borderWidth: 1, titleColor: '#FFF', bodyColor: '#38BDF8' }
+                }, cutout: '68%'
+            }
+        });
+
+        // 2. Chart Desglose de Costos
+        const costos = {
+            'Materiales e Insumos': 0, 'Mano de Obra Directa': 0,
+            'Subcontratos / MO Externa': 0, 'Gastos Admin / CIF': 0
+        };
+        ots.forEach(o => {
+            if (o.desglose) {
+                costos['Materiales e Insumos'] += o.desglose['Materiales e Insumos'] || 0;
+                costos['Mano de Obra Directa'] += o.desglose['Mano de Obra Directa'] || 0;
+                costos['Subcontratos / MO Externa'] += o.desglose['Subcontratos / MO Externa'] || 0;
+                costos['Gastos Admin / CIF'] += o.desglose['Gastos Admin / CIF'] || 0;
+            }
+        });
+
+        const totalCostos = Object.values(costos).reduce((a,b) => a+b, 0);
+        document.getElementById('tituloChart2').innerHTML = `<span>💰</span> Desglose de Costos Reales Incurridos`;
+        document.getElementById('subtituloChart2').textContent = formatCLP(totalCostos);
+
+        chart2 = new Chart(document.getElementById('chartDesgloseCostos'), {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(costos),
+                datasets: [{
+                    data: Object.values(costos),
+                    backgroundColor: ['#0284C7', '#10B981', '#F59E0B', '#EC4899'],
+                    borderWidth: 2, borderColor: '#0F172A', hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right', labels: { color: '#94A3B8', font: { size: 11, weight: '600' }, usePointStyle: true } },
+                    tooltip: {
+                        backgroundColor: '#0F172A', borderColor: '#334155', borderWidth: 1, titleColor: '#FFF', bodyColor: '#38BDF8',
+                        callbacks: { label: (ctx) => ` ${ctx.label}: ${formatCLP(ctx.raw)}` }
+                    }
+                }, cutout: '68%'
+            }
+        });
+
+        // 3. Chart Comparativo Presupuestado vs Real
+        const labels = ots.map(o => o.codigo);
+        const presupData = ots.map(o => o.presupuestado);
+        const realData = ots.map(o => o.real);
+        const colorsReal = ots.map(o => o.sobrecosto ? '#DC2626' : '#10B981');
+
+        document.getElementById('tituloChart3').innerHTML = `<span>📈</span> Presupuestado vs Real por OT`;
+        document.getElementById('subtituloChart3').textContent = `Comparativa de desviaciones en OTs`;
+
+        chart3 = new Chart(document.getElementById('chartComparativoOTs'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'Presupuestado', data: presupData, backgroundColor: '#0284C7', borderRadius: 6 },
+                    { label: 'Real Incurrido', data: realData, backgroundColor: colorsReal, borderRadius: 6 }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#0F172A', borderColor: '#334155', borderWidth: 1, titleColor: '#FFF',
+                        callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${formatCLP(ctx.raw)}` }
+                    }
+                },
+                scales: {
+                    x: { ticks: { color: '#94A3B8', font: { size: 10 } }, grid: { display: false } },
+                    y: {
+                        ticks: { color: '#94A3B8', font: { size: 10 }, callback: (v) => '$' + (v/1000).toLocaleString('es-CL') + 'k' },
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                    }
+                }
+            }
+        });
+
+        // 4. Chart Cobranza Global
+        const totalPagado = ots.reduce((sum, o) => sum + (o.total_pagado || 0), 0);
+        const totalPendiente = ots.reduce((sum, o) => sum + (o.saldo_pendiente || 0), 0);
+
+        document.getElementById('tituloChart4').innerHTML = `<span>💳</span> Estado de Cobranza Consolidado`;
+        document.getElementById('subtituloChart4').textContent = `Total Cobrado vs Pendiente`;
+
+        chart4 = new Chart(document.getElementById('chartCobranzasFlujo'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Total Recaudado / Cobrado', 'Saldo Pendiente de Cobro'],
+                datasets: [{
+                    data: [totalPagado, totalPendiente],
+                    backgroundColor: ['#10B981', '#F59E0B'],
+                    borderWidth: 2, borderColor: '#0F172A', hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right', labels: { color: '#94A3B8', font: { size: 11, weight: '600' }, usePointStyle: true } },
+                    tooltip: {
+                        backgroundColor: '#0F172A', borderColor: '#334155', borderWidth: 1, titleColor: '#FFF', bodyColor: '#38BDF8',
+                        callbacks: { label: (ctx) => ` ${ctx.label}: ${formatCLP(ctx.raw)}` }
+                    }
+                }, cutout: '68%'
+            }
+        });
+    }
+
+    function _renderChartsSingleOT(ot) {
+        if (chart1) chart1.destroy();
+        if (chart2) chart2.destroy();
+        if (chart3) chart3.destroy();
+        if (chart4) chart4.destroy();
+
+        // 1. Chart Etapa / Avance OT
+        const etapasList = ['planificado', 'corte', 'armado', 'laca_pintura', 'montaje', 'entregado'];
+        const etapasLabels = ['Planificado', 'En Corte', 'En Armado', 'Laca y Pintura', 'Montaje en Obra', 'Entregado'];
+        const idxActual = etapasList.indexOf(ot.estado);
+        const progressValues = etapasList.map((e, idx) => idx <= idxActual ? 1 : 0);
+        const colorsProgress = etapasList.map((e, idx) => idx === idxActual ? '#0284C7' : (idx < idxActual ? '#10B981' : '#334155'));
+
+        document.getElementById('tituloChart1').innerHTML = `<span>🏭</span> Avance Etapa Kanban (${ot.codigo})`;
+        document.getElementById('subtituloChart1').textContent = `Etapa Actual: ${ot.estado_display}`;
+
+        chart1 = new Chart(document.getElementById('chartEstadosProduccion'), {
+            type: 'bar',
+            data: {
+                labels: etapasLabels,
+                datasets: [{
+                    label: 'Progreso', data: progressValues, backgroundColor: colorsProgress, borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: '#94A3B8', font: { size: 10 } }, grid: { display: false } },
+                    y: { display: false, max: 1.2 }
+                }
+            }
+        });
+
+        // 2. Chart Desglose Costos Single OT
+        document.getElementById('tituloChart2').innerHTML = `<span>💰</span> Desglose Costos OT (${ot.codigo})`;
+        document.getElementById('subtituloChart2').textContent = formatCLP(ot.real);
+
+        chart2 = new Chart(document.getElementById('chartDesgloseCostos'), {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(ot.desglose),
+                datasets: [{
+                    data: Object.values(ot.desglose),
+                    backgroundColor: ['#0284C7', '#10B981', '#F59E0B', '#EC4899'],
+                    borderWidth: 2, borderColor: '#0F172A', hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right', labels: { color: '#94A3B8', font: { size: 11, weight: '600' }, usePointStyle: true } },
+                    tooltip: {
+                        backgroundColor: '#0F172A', borderColor: '#334155', borderWidth: 1, titleColor: '#FFF',
+                        callbacks: { label: (ctx) => ` ${ctx.label}: ${formatCLP(ctx.raw)}` }
+                    }
+                }, cutout: '68%'
+            }
+        });
+
+        // 3. Chart Comparativo Single OT (Cotizado vs Presupuesto vs Real)
+        document.getElementById('tituloChart3').innerHTML = `<span>📈</span> Análisis Financiero OT (${ot.codigo})`;
+        document.getElementById('subtituloChart3').textContent = `Precio Cotizado vs Costos`;
+
+        chart3 = new Chart(document.getElementById('chartComparativoOTs'), {
+            type: 'bar',
+            data: {
+                labels: ['Precio Cotizado Net', 'Costo Presupuestado', 'Costo Real Incurrido', 'Utilidad Neta Real'],
+                datasets: [{
+                    data: [ot.precio_cotizado, ot.presupuestado, ot.real, ot.precio_cotizado - ot.real],
+                    backgroundColor: ['#38BDF8', '#818CF8', ot.sobrecosto ? '#DC2626' : '#10B981', '#34D399'],
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#0F172A', borderColor: '#334155', borderWidth: 1, titleColor: '#FFF',
+                        callbacks: { label: (ctx) => ` ${ctx.label}: ${formatCLP(ctx.raw)}` }
+                    }
+                },
+                scales: {
+                    x: { ticks: { color: '#94A3B8', font: { size: 10 } }, grid: { display: false } },
+                    y: {
+                        ticks: { color: '#94A3B8', font: { size: 10 }, callback: (v) => '$' + (v/1000).toLocaleString('es-CL') + 'k' },
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                    }
+                }
+            }
+        });
+
+        // 4. Chart Cobranza Single OT
+        document.getElementById('tituloChart4').innerHTML = `<span>💳</span> Cobranza de la OT (${ot.codigo})`;
+        document.getElementById('subtituloChart4').textContent = `Monto Pagado vs Saldo Pendiente`;
+
+        chart4 = new Chart(document.getElementById('chartCobranzasFlujo'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Monto Pagado por Cliente', 'Saldo Pendiente por Cobrar'],
+                datasets: [{
+                    data: [ot.total_pagado, ot.saldo_pendiente],
+                    backgroundColor: ['#10B981', '#F59E0B'],
+                    borderWidth: 2, borderColor: '#0F172A', hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right', labels: { color: '#94A3B8', font: { size: 11, weight: '600' }, usePointStyle: true } },
+                    tooltip: {
+                        backgroundColor: '#0F172A', borderColor: '#334155', borderWidth: 1, titleColor: '#FFF',
+                        callbacks: { label: (ctx) => ` ${ctx.label}: ${formatCLP(ctx.raw)}` }
+                    }
+                }, cutout: '68%'
+            }
+        });
+    }
+
+    // Escuchar Cambios en Filtros
+    selectOT.addEventListener('change', renderCharts);
+    selectEtapa.addEventListener('change', renderCharts);
+
+    // Render Inicial
+    renderCharts();
+});
+</script>
 {% endblock %}

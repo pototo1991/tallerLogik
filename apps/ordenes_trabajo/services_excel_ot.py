@@ -252,13 +252,43 @@ def procesar_excel_ot(filepath: str, empresa: Empresa, usuario: Usuario, estado_
         # 5. Ingerir Tiempos MOD (Mano de Obra Directa)
         tiempos_creados = 0
         
-        # Mapeo de operarios en Excel a Usuarios del sistema (o usuario por defecto)
+        # Mapeo de operarios en Excel a Usuarios del sistema (o creación dinámica si no existe)
         def _get_usuario_operario(nombre_operario: str) -> Usuario:
-            first_name = nombre_operario.split()[0].title()
-            u = Usuario.objects.filter(id_empresa=empresa, nombre_completo__icontains=first_name).first()
+            nombre_clean = nombre_operario.strip()
+            if not nombre_clean:
+                return usuario
+                
+            # 1. Buscar coincidencia exacta o por primer nombre en la empresa actual
+            u = Usuario.objects.filter(id_empresa=empresa, nombre_completo__iexact=nombre_clean).first()
             if not u:
-                # Usar el usuario actual que está realizando la importación
-                u = usuario
+                first_name = nombre_clean.split()[0].title()
+                u = Usuario.objects.filter(id_empresa=empresa, nombre_completo__icontains=first_name).first()
+
+            if u:
+                if u.costo_hora == Decimal('0.00'):
+                    u.costo_hora = Decimal('5000.00')
+                    u.save(update_fields=['costo_hora'])
+                return u
+            if not u:
+                slug_nombre = re.sub(r'[^a-z0-9]', '', nombre_clean.lower()) or 'operario'
+                email_base = f"{slug_nombre}@taller.local"
+                email_final = email_base
+                counter = 1
+                while Usuario.objects.filter(correo_electronico=email_final).exists():
+                    email_final = f"{slug_nombre}_{counter}@taller.local"
+                    counter += 1
+
+                u = Usuario.objects.create_user(
+                    correo_electronico=email_final,
+                    password=None,
+                    nombre_completo=nombre_clean,
+                    id_empresa=empresa,
+                    rol='operario',
+                    costo_hora=Decimal('5000.00'),
+                    activo=True
+                )
+                logger.info(f"Creado nuevo operario dinámicamente desde Excel: {nombre_clean} ({email_final})")
+
             return u
 
         # Parse Fabricación (R95-R108) e Instalación (R112-R125)

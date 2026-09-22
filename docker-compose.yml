@@ -57,8 +57,6 @@ services:
       - POSTGRES_DB=tallerlogik_db
       - POSTGRES_USER=taller_user
       - POSTGRES_PASSWORD=taller_password_secure
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -70,8 +68,6 @@ services:
   redis:
     image: redis:7-alpine
     restart: always
-    ports:
-      - "6379:6379"
 
 volumes:
   postgres_data:
